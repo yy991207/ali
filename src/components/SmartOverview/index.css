@@ -1,0 +1,254 @@
+.smart-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: #fff;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+/* 关键词样式 - 紫色字浅色背景 */
+.keywords-card {
+  border: none;
+  box-shadow: none;
+}
+
+.keywords-card .ant-card-head {
+  padding: 0;
+  min-height: 28px;
+  margin-bottom: 4px;
+  border-bottom: none;
+}
+
+.keywords-card .ant-card-head-title {
+  padding: 0;
+}
+
+.keywords-card .ant-card-body {
+  padding: 0;
+}
+
+.keywords-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.keywords-list {
+  transition: max-height 0.3s ease-in-out;
+}
+
+.keywords-list.collapsed {
+  max-height: 32px;
+  padding-right: 70px;
+}
+
+.keywords-list.expanded {
+  max-height: 500px;
+  padding-right: 70px;
+}
+
+.keywords-wrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.keyword-tag {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #f0f0ff !important;
+  color: #605ce5 !important;
+  border: none;
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 4px;
+}
+
+.keyword-tag:hover {
+  transform: scale(1.05);
+  background: #e6e6ff !important;
+}
+
+.keywords-expand-btn {
+  padding: 4px 0 !important;
+  height: auto !important;
+  font-size: 13px !important;
+  color: #605ce5 !important;
+  min-width: 56px;
+  text-align: right;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.keywords-expand-btn:hover {
+  color: #4a3f8c !important;
+}
+
+/* 全文概要样式 */
+.summary-card {
+  border: none;
+  box-shadow: none;
+}
+
+.summary-card .ant-card-head {
+  padding: 0;
+  min-height: 28px;
+  margin-bottom: 4px;
+  border-bottom: none;
+}
+
+.summary-card .ant-card-head-title {
+  padding: 0;
+}
+
+.summary-card .ant-card-body {
+  padding: 0;
+}
+
+.summary-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.full-summary {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #595959;
+  margin-bottom: 0 !important;
+  text-align: justify;
+  flex: 1;
+}
+
+.full-summary.collapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.full-summary.expanded {
+  display: block;
+}
+
+.summary-expand-inline {
+  color: #605ce5;
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+  line-height: 1.6;
+  margin-left: 4px;
+}
+
+.summary-expand-inline:hover {
+  color: #4a3f8c;
+}
+
+/* Tab 样式 */
+.tabs-card {
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.tabs-card .ant-card-body {
+  padding: 0;
+}
+
+.overview-tabs .ant-tabs-nav {
+  margin-bottom: 8px;
+}
+
+.tab-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 章节速览样式 */
+.agenda-timeline {
+  padding-top: 4px;
+}
+
+.agenda-item {
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.agenda-item:hover {
+  background: #f5f5f5;
+}
+
+.agenda-item.active {
+  background: #f0f0ff;
+}
+
+.agenda-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.agenda-title {
+  font-size: 14px;
+  flex: 1;
+}
+
+.agenda-item.active .agenda-title {
+  color: #605ce5;
+}
+
+.agenda-time {
+  font-size: 12px;
+  color: #8c8c8c;
+  background: #f5f5f5;
+  border: none;
+  flex-shrink: 0;
+}
+
+.agenda-summary {
+  font-size: 13px;
+  color: #8c8c8c;
+  margin-bottom: 0 !important;
+  line-height: 1.5;
+}
+
+/* 发言总结样式 */
+.role-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.role-summary-item {
+  padding: 8px;
+  background: #f5f5f5;
+  border-radius: 6px;
+}
+
+.role-summary-text {
+  margin-bottom: 0 !important;
+  margin-top: 4px;
+  font-size: 13px;
+  color: #595959;
+}
+
+/* 问答回顾样式 */
+.qa-placeholder {
+  padding: 20px;
+  text-align: center;
+  color: #8c8c8c;
+}

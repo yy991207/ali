@@ -1,0 +1,391 @@
+.video-player {
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.video-container {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+.video-element {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* 控制栏 - 半透明背景 */
+.control-bar {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 60%, transparent 100%);
+  padding: 16px 16px 8px;
+  color: #fff;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+
+.control-bar.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.control-bar.hidden {
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+}
+
+/* 进度条区域 */
+.progress-section {
+  margin-bottom: 8px;
+}
+
+.progress-container {
+  position: relative;
+  height: 16px;
+  display: flex;
+  align-items: center;
+}
+
+/* 分段标记容器 */
+.segment-marks {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  right: 10px;
+  height: 4px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 30;
+}
+
+.segment-mark {
+  position: absolute;
+  height: 100%;
+  background: rgba(96, 92, 229, 0.6);
+  border-radius: 2px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.2s ease;
+  min-width: 2px;
+}
+
+.segment-mark:hover,
+.segment-mark.hovered {
+  background: rgba(96, 92, 229, 0.9);
+  height: 8px;
+  top: -2px;
+}
+
+.segment-mark.active {
+  background: #605ce5;
+  height: 8px;
+  top: -2px;
+}
+
+/* 进度滑块 */
+.progress-slider {
+  flex: 1;
+  margin: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.progress-slider :global(.ant-slider-rail),
+.progress-slider :global(.ant-slider-track) {
+  pointer-events: auto;
+}
+
+.progress-slider :global(.ant-slider-handle) {
+  pointer-events: auto;
+  z-index: 40;
+}
+
+.progress-slider :global(.ant-slider-rail) {
+  background: rgba(255, 255, 255, 0.2);
+  height: 4px;
+}
+
+.progress-slider :global(.ant-slider-track) {
+  background: #605ce5;
+  height: 4px;
+}
+
+.progress-slider :global(.ant-slider-handle) {
+  border-color: #605ce5;
+  background: #605ce5;
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+}
+
+.progress-slider :global(.ant-slider-step) {
+  display: none;
+}
+
+/* 时间显示 */
+.time-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+  margin-top: 2px;
+}
+
+.current-time {
+  color: #fff;
+}
+
+/* 控制按钮区域 */
+.controls-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.playback-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.play-btn {
+  color: #fff !important;
+  font-size: 16px;
+}
+
+.play-btn:hover {
+  color: #605ce5 !important;
+}
+
+.function-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 控制按钮样式 */
+.control-btn {
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-size: 12px;
+  padding: 2px 6px !important;
+  height: auto !important;
+}
+
+.control-btn:hover {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+.control-btn.active {
+  color: #605ce5 !important;
+}
+
+/* 音量控制 */
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.volume-slider {
+  width: 60px;
+}
+
+.volume-slider :global(.ant-slider-track) {
+  background: #605ce5;
+}
+
+/* Ant Design 按钮样式覆盖 */
+.control-bar :global(.ant-btn-text) {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.control-bar :global(.ant-btn-text:hover) {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* 分段浮窗样式 - 浅紫色主题 */
+.segment-popover {
+  max-width: 280px;
+  padding: 8px 10px;
+  background: #f0f0ff;
+  border-radius: 6px;
+}
+
+.popover-time {
+  font-size: 12px;
+  font-weight: 500;
+  color: #605ce5;
+  margin-bottom: 4px;
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.popover-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a3f8c;
+  margin-bottom: 4px;
+  line-height: 1.4;
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.popover-summary {
+  font-size: 12px;
+  color: #1a1a1a;
+  line-height: 1.5;
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* Popover 覆盖层样式 */
+:global(.segment-popover-overlay .ant-popover-inner) {
+  padding: 0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(96, 92, 229, 0.2);
+  background: #f0f0ff;
+}
+
+:global(.segment-popover-overlay .ant-popover-arrow) {
+  background: #f0f0ff;
+}
+
+/* 倍速下拉菜单 - 黑底白字 */
+:global(.rate-dropdown-menu) {
+  background: #1a1a1a !important;
+  border-radius: 8px;
+  padding: 4px 0;
+}
+
+:global(.rate-dropdown-menu .ant-dropdown-menu-item) {
+  color: #fff;
+  font-size: 13px;
+  padding: 8px 16px;
+}
+
+:global(.rate-dropdown-menu .ant-dropdown-menu-item:hover) {
+  background: #333;
+}
+
+:global(.rate-dropdown-menu .ant-dropdown-menu-item-selected) {
+  background: #605ce5;
+  color: #fff;
+}
+
+/* 字幕设置面板 - 黑底白字 */
+:global(.subtitle-settings-overlay .ant-popover-inner) {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 200px;
+}
+
+:global(.subtitle-settings-overlay .ant-popover-arrow) {
+  background: #1a1a1a;
+}
+
+.subtitle-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.subtitle-setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.setting-label {
+  color: #fff;
+  font-size: 14px;
+}
+
+/* 开关样式 */
+.setting-switch {
+  width: 44px;
+  height: 24px;
+  background: #444;
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.setting-switch.active {
+  background: #605ce5;
+}
+
+.switch-thumb {
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s;
+}
+
+.setting-switch.active .switch-thumb {
+  transform: translateX(20px);
+}
+
+/* 颜色选项 */
+.color-options {
+  display: flex;
+  gap: 16px;
+}
+
+.color-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.color-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+}
+
+.color-dot.dark {
+  background: #333;
+  border-color: #666;
+}
+
+.color-dot.light {
+  background: #fff;
+  border-color: #ccc;
+}
+
+.color-option.selected .color-dot.dark {
+  border-color: #605ce5;
+  box-shadow: 0 0 0 2px #605ce5;
+}
+
+.color-option.selected .color-dot.light {
+  border-color: #605ce5;
+  box-shadow: 0 0 0 2px #605ce5;
+}
+
+.color-label {
+  color: #fff;
+  font-size: 13px;
+}
