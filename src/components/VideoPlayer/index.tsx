@@ -637,7 +637,7 @@ export default function VideoPlayer({
             <Popover
               content={renderSubtitleSettings()}
               placement="top"
-              trigger="click"
+              trigger="hover"
               overlayClassName="subtitle-settings-overlay"
             >
               <Button

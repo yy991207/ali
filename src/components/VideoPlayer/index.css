@@ -265,37 +265,43 @@
 }
 
 /* 倍速下拉菜单 - 黑底白字 */
-:global(.rate-dropdown-menu) {
+.rate-dropdown-menu {
   background: #1a1a1a !important;
-  border-radius: 8px;
-  padding: 4px 0;
+  border-radius: 8px !important;
+  padding: 4px 0 !important;
 }
 
-:global(.rate-dropdown-menu .ant-dropdown-menu-item) {
-  color: #fff;
-  font-size: 13px;
-  padding: 8px 16px;
+.rate-dropdown-menu .ant-dropdown-menu {
+  background: #1a1a1a !important;
+  box-shadow: none !important;
 }
 
-:global(.rate-dropdown-menu .ant-dropdown-menu-item:hover) {
-  background: #333;
+.rate-dropdown-menu .ant-dropdown-menu-item {
+  color: #fff !important;
+  font-size: 13px !important;
+  padding: 8px 16px !important;
+  background: transparent !important;
 }
 
-:global(.rate-dropdown-menu .ant-dropdown-menu-item-selected) {
-  background: #605ce5;
-  color: #fff;
+.rate-dropdown-menu .ant-dropdown-menu-item:hover {
+  background: #333 !important;
+}
+
+.rate-dropdown-menu .ant-dropdown-menu-item-selected {
+  background: #605ce5 !important;
+  color: #fff !important;
 }
 
 /* 字幕设置面板 - 黑底白字 */
-:global(.subtitle-settings-overlay .ant-popover-inner) {
-  background: #1a1a1a;
+.subtitle-settings-overlay .ant-popover-inner {
+  background: #1a1a1a !important;
   border-radius: 12px;
   padding: 16px;
   min-width: 200px;
 }
 
-:global(.subtitle-settings-overlay .ant-popover-arrow) {
-  background: #1a1a1a;
+.subtitle-settings-overlay .ant-popover-arrow {
+  background: #1a1a1a !important;
 }
 
 .subtitle-settings {
