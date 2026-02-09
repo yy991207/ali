@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Card, Tag, Timeline, Typography, Tabs, Button } from 'antd'
-import { ClockCircleOutlined, TagOutlined, FileTextOutlined, MessageOutlined, QuestionCircleOutlined, DownOutlined, UpOutlined } from '@ant-design/icons'
+import { Card, Tag, Typography, Tabs, Button } from 'antd'
+import { ClockCircleOutlined, TagOutlined, FileTextOutlined, MessageOutlined, QuestionCircleOutlined } from '@ant-design/icons'
 import { AgendaItem, KeywordItem, RoleSummaryItem } from '../../types'
 import { formatTimeFromMs } from '../../utils/time'
 import './index.css'
@@ -187,7 +187,7 @@ export default function SmartOverview({
       >
         <div className="keywords-wrapper">
           <div className={`keywords-list ${keywordsExpanded ? 'expanded' : 'collapsed'}`}>
-            {keywords.map((keyword) => (
+            {displayedKeywords.map((keyword) => (
               <Tag
                 key={keyword.id}
                 className="keyword-tag"

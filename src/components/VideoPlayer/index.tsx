@@ -10,8 +10,6 @@ import {
   FullscreenOutlined,
   FullscreenExitOutlined,
   FileTextOutlined,
-  LeftOutlined,
-  RightOutlined,
   CameraOutlined,
   SearchOutlined,
   FileTextOutlined as NoteIcon,
@@ -21,7 +19,7 @@ import {
   RobotOutlined,
   EditOutlined
 } from '@ant-design/icons'
-import { AgendaItem, TranscriptParagraph, TranscriptSentence } from '../../types'
+import { AgendaItem, TranscriptParagraph } from '../../types'
 import { formatTime, formatTimeFromMs } from '../../utils/time'
 import './index.css'
 
@@ -33,7 +31,6 @@ interface VideoPlayerProps {
   paragraphs: TranscriptParagraph[]
   currentTime: number
   onTimeUpdate: (time: number) => void
-  onSentenceChange?: (sentence: TranscriptSentence) => void
   isCollapsed?: boolean
   onToggleCollapse?: () => void
 }
@@ -48,17 +45,19 @@ export default function VideoPlayer({
   paragraphs,
   currentTime,
   onTimeUpdate,
-  onSentenceChange,
   isCollapsed = false,
   onToggleCollapse
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const playerRef = useRef<HTMLDivElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [playbackRate, setPlaybackRate] = useState(1)
+  const [, setPlaybackRate] = useState(1)
   const [volume, setVolume] = useState(1)
   const [hoveredSegment, setHoveredSegment] = useState<number | null>(null)
   const [hoveredTime, setHoveredTime] = useState<number | null>(null)
+  const [hoveredBarTime, setHoveredBarTime] = useState<number | null>(null)
+  const [hoveredBarLeftPercent, setHoveredBarLeftPercent] = useState<number>(0)
+  const [isHoveringProgressBar, setIsHoveringProgressBar] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showSubtitle, setShowSubtitle] = useState(false)
   const [showSpeaker, setShowSpeaker] = useState(true)
@@ -82,176 +81,6 @@ export default function VideoPlayer({
     })
     return Array.from(speakers)
   }, [paragraphs])
-
-  // 获取所有句子列表
-  const allSentences = useMemo(() => {
-    const sentences: TranscriptSentence[] = []
-    if (!paragraphs || !Array.isArray(paragraphs)) return sentences
-    paragraphs.forEach(pg => {
-      if (pg?.sc && Array.isArray(pg.sc)) {
-        sentences.push(...pg.sc)
-      }
-    })
-    // 按开始时间排序
-    return sentences.sort((a, b) => a.bt - b.bt)
-  }, [paragraphs])
-
-  // 将句子按发言人合并成组（连续的同一个人说的话合并）
-  const speakerGroups = useMemo(() => {
-    const groups: Array<{
-      id: string
-      speakerId: number
-      startTime: number
-      endTime: number
-      sentences: TranscriptSentence[]
-    }> = []
-    let currentGroup: typeof groups[0] | null = null
-
-    for (const sentence of allSentences) {
-      if (!currentGroup || currentGroup.speakerId !== sentence.si) {
-        // 发言人变化，创建新组
-        if (currentGroup) {
-          groups.push(currentGroup)
-        }
-        currentGroup = {
-          id: `group-${sentence.id}`,
-          speakerId: sentence.si,
-          startTime: sentence.bt,
-          endTime: sentence.et,
-          sentences: [sentence]
-        }
-      } else {
-        // 同一个发言人，合并到当前组
-        currentGroup.endTime = sentence.et
-        currentGroup.sentences.push(sentence)
-      }
-    }
-
-    // 添加最后一组
-    if (currentGroup) {
-      groups.push(currentGroup)
-    }
-
-    return groups
-  }, [allSentences])
-
-  // 获取当前所在的组索引
-  const currentGroupIndex = useMemo(() => {
-    const currentMs = currentTime * 1000
-    return speakerGroups.findIndex(g => currentMs >= g.startTime && currentMs <= g.endTime)
-  }, [currentTime, speakerGroups])
-
-  // 获取当前句子索引（用于触发转写面板滚动）
-  const currentSentenceIndex = useMemo(() => {
-    const currentMs = currentTime * 1000
-    return allSentences.findIndex(s => currentMs >= s.bt && currentMs <= s.et)
-  }, [currentTime, allSentences])
-
-  // 跳转到前一句 - 按合并后的发言人组跳转，只跳转到同一发言人的上一个组
-  const jumpToPrevSentence = useCallback(() => {
-    console.log('[前一句] 点击了前一句按钮')
-    console.log('[前一句] videoRef.current:', videoRef.current)
-    console.log('[前一句] speakerGroups.length:', speakerGroups.length)
-
-    if (!videoRef.current || speakerGroups.length === 0) {
-      console.log('[前一句] 条件不满足，直接返回')
-      return
-    }
-
-    const currentMs = videoRef.current.currentTime * 1000
-    console.log('[前一句] 当前时间(ms):', currentMs)
-    console.log('[前一句] 当前时间(秒):', videoRef.current.currentTime)
-
-    // 找到当前所在的组，如果没找到（在间隙中），找最接近的组
-    let currentIdx = speakerGroups.findIndex(g => currentMs >= g.startTime && currentMs <= g.endTime)
-    console.log('[前一句] 当前组索引(第一次查找):', currentIdx)
-
-    // 如果没找到当前组，找当前时间之后的第一个组，然后回退一个
-    if (currentIdx === -1) {
-      const nextGroupIdx = speakerGroups.findIndex(g => g.startTime > currentMs)
-      currentIdx = nextGroupIdx - 1
-      console.log('[前一句] 在间隙中，重新计算后的索引:', currentIdx, 'nextGroupIdx:', nextGroupIdx)
-    }
-
-    // 如果还是没找到或者已经在第一个组，无法向前跳转
-    if (currentIdx <= 0) {
-      console.log('[前一句] 无法跳转，currentIdx:', currentIdx)
-      return
-    }
-
-    const currentGroup = speakerGroups[currentIdx]
-    const currentSpeakerId = currentGroup.speakerId
-    console.log('[前一句] 当前组:', currentGroup)
-    console.log('[前一句] 当前发言人ID:', currentSpeakerId)
-
-    // 向前查找同一发言人的上一个组
-    for (let i = currentIdx - 1; i >= 0; i--) {
-      console.log(`[前一句] 检查索引 ${i}, 发言人ID: ${speakerGroups[i].speakerId}`)
-      if (speakerGroups[i].speakerId === currentSpeakerId) {
-        console.log('[前一句] 找到目标组:', speakerGroups[i])
-        videoRef.current.currentTime = speakerGroups[i].startTime / 1000
-        onTimeUpdate(speakerGroups[i].startTime / 1000)
-        // 触发转写面板滚动到该组的第一个句子
-        onSentenceChange?.(speakerGroups[i].sentences[0])
-        console.log('[前一句] 跳转完成')
-        return
-      }
-    }
-    console.log('[前一句] 没有找到同一发言人的上一个组')
-  }, [speakerGroups, onTimeUpdate, onSentenceChange])
-
-  // 跳转到后一句 - 按合并后的发言人组跳转，只跳转到同一发言人的下一个组
-  const jumpToNextSentence = useCallback(() => {
-    console.log('[后一句] 点击了后一句按钮')
-    console.log('[后一句] videoRef.current:', videoRef.current)
-    console.log('[后一句] speakerGroups.length:', speakerGroups.length)
-
-    if (!videoRef.current || speakerGroups.length === 0) {
-      console.log('[后一句] 条件不满足，直接返回')
-      return
-    }
-
-    const currentMs = videoRef.current.currentTime * 1000
-    console.log('[后一句] 当前时间(ms):', currentMs)
-    console.log('[后一句] 当前时间(秒):', videoRef.current.currentTime)
-
-    // 找到当前所在的组，如果没找到（在间隙中），找最接近的组
-    let currentIdx = speakerGroups.findIndex(g => currentMs >= g.startTime && currentMs <= g.endTime)
-    console.log('[后一句] 当前组索引(第一次查找):', currentIdx)
-
-    // 如果没找到当前组，找当前时间之后的第一个组
-    if (currentIdx === -1) {
-      const nextGroupIdx = speakerGroups.findIndex(g => g.startTime > currentMs)
-      currentIdx = nextGroupIdx - 1
-      console.log('[后一句] 在间隙中，重新计算后的索引:', currentIdx, 'nextGroupIdx:', nextGroupIdx)
-    }
-
-    // 如果还是没找到或者已经在最后一个组，无法向后跳转
-    if (currentIdx < 0 || currentIdx >= speakerGroups.length - 1) {
-      console.log('[后一句] 无法跳转，currentIdx:', currentIdx, '总组数:', speakerGroups.length)
-      return
-    }
-
-    const currentGroup = speakerGroups[currentIdx]
-    const currentSpeakerId = currentGroup.speakerId
-    console.log('[后一句] 当前组:', currentGroup)
-    console.log('[后一句] 当前发言人ID:', currentSpeakerId)
-
-    // 向后查找同一发言人的下一个组
-    for (let i = currentIdx + 1; i < speakerGroups.length; i++) {
-      console.log(`[后一句] 检查索引 ${i}, 发言人ID: ${speakerGroups[i].speakerId}`)
-      if (speakerGroups[i].speakerId === currentSpeakerId) {
-        console.log('[后一句] 找到目标组:', speakerGroups[i])
-        videoRef.current.currentTime = speakerGroups[i].startTime / 1000
-        onTimeUpdate(speakerGroups[i].startTime / 1000)
-        // 触发转写面板滚动到该组的第一个句子
-        onSentenceChange?.(speakerGroups[i].sentences[0])
-        console.log('[后一句] 跳转完成')
-        return
-      }
-    }
-    console.log('[后一句] 没有找到同一发言人的下一个组')
-  }, [speakerGroups, onTimeUpdate, onSentenceChange])
 
   // 筛选面板
   const renderFilterPanel = () => (
@@ -300,7 +129,7 @@ export default function VideoPlayer({
           >
             <span className="speaker-label">全选</span>
           </Checkbox>
-          {speakerList.map((speaker, index) => (
+          {speakerList.map((speaker) => (
             <Checkbox
               key={speaker}
               checked={selectedSpeakers.includes(speaker) || selectedSpeakers.includes('all')}
@@ -551,6 +380,23 @@ export default function VideoPlayer({
     )
   }
 
+  // 根据时间找到对应章节
+  const getAgendaItemByTime = useCallback((timeMs: number) => {
+    return agendaItems.find(it => it.time !== undefined && it.endTime !== undefined && timeMs >= it.time && timeMs <= it.endTime) || null
+  }, [agendaItems])
+
+  // 处理进度条悬停（用于在整条进度条上展示章节浮窗）
+  const handleProgressBarMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!duration) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const percent = Math.max(0, Math.min(1, x / rect.width))
+    const timeSec = percent * duration
+    const timeMs = timeSec * 1000
+    setHoveredBarTime(timeMs)
+    setHoveredBarLeftPercent(percent * 100)
+  }, [duration])
+
   // 切换全屏
   const toggleFullscreen = useCallback(() => {
     if (!playerRef.current) return
@@ -651,6 +497,36 @@ export default function VideoPlayer({
         {/* 进度条区域 */}
         <div className="progress-section">
           <div className="progress-container">
+            {/* 进度条整体悬停浮窗锚点（参考分段进度条浮窗逻辑） */}
+            {(() => {
+              if (!isHoveringProgressBar || hoveredBarTime === null) return null
+              const agendaItem = getAgendaItemByTime(hoveredBarTime)
+              if (!agendaItem) return null
+              return (
+                <Popover
+                  open
+                  content={renderPopoverContent(agendaItem, hoveredBarTime)}
+                  placement="top"
+                  overlayClassName="segment-popover-overlay"
+                >
+                  <span
+                    className="progress-hover-anchor"
+                    style={{ left: `${hoveredBarLeftPercent}%` }}
+                  />
+                </Popover>
+              )
+            })()}
+
+            {/* 进度条悬停层：保证鼠标放在进度条任意位置都能触发浮窗 */}
+            <div
+              className="progress-hover-layer"
+              onMouseEnter={() => setIsHoveringProgressBar(true)}
+              onMouseLeave={() => {
+                setIsHoveringProgressBar(false)
+                setHoveredBarTime(null)
+              }}
+              onMouseMove={handleProgressBarMouseMove}
+            />
             {/* 分段标记 */}
             <div className="segment-marks">
               {agendaItems.map((item, index) => {
@@ -840,6 +716,147 @@ export default function VideoPlayer({
           </div>
         </div>
       </div>
+
+      {/* 底部迷你播放条 - 视频折叠时显示 */}
+      {isCollapsed && (
+        <div className="mini-player-bar">
+          {/* 左侧：时间显示 */}
+          <div className="mini-time-display">
+            <span className="mini-current-time">{formatTime(currentTime)}</span>
+          </div>
+
+          {/* 中间：播放控制 + 进度条 */}
+          <div className="mini-controls-center">
+            {/* 播放/暂停按钮 */}
+            <Button
+              type="text"
+              className="mini-play-btn"
+              icon={isPlaying ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+              onClick={togglePlay}
+            />
+
+            {/* 上一章/下一章 */}
+            <Tooltip title="上一章">
+              <Button
+                type="text"
+                className="mini-control-btn"
+                icon={<StepBackwardOutlined />}
+                onClick={jumpToPrevSegment}
+              />
+            </Tooltip>
+            <Tooltip title="下一章">
+              <Button
+                type="text"
+                className="mini-control-btn"
+                icon={<StepForwardOutlined />}
+                onClick={jumpToNextSegment}
+              />
+            </Tooltip>
+
+            {/* 分段进度条 */}
+            <div className="mini-progress-container">
+              {/* 迷你进度条整体悬停浮窗锚点 */}
+              {(() => {
+                if (!isHoveringProgressBar || hoveredBarTime === null) return null
+                const agendaItem = getAgendaItemByTime(hoveredBarTime)
+                if (!agendaItem) return null
+                return (
+                  <Popover
+                    open
+                    content={renderPopoverContent(agendaItem, hoveredBarTime)}
+                    placement="top"
+                    overlayClassName="segment-popover-overlay"
+                  >
+                    <span
+                      className="mini-progress-hover-anchor"
+                      style={{ left: `${hoveredBarLeftPercent}%` }}
+                    />
+                  </Popover>
+                )
+              })()}
+
+              {/* 迷你进度条悬停层 */}
+              <div
+                className="mini-progress-hover-layer"
+                onMouseEnter={() => setIsHoveringProgressBar(true)}
+                onMouseLeave={() => {
+                  setIsHoveringProgressBar(false)
+                  setHoveredBarTime(null)
+                }}
+                onMouseMove={handleProgressBarMouseMove}
+              />
+              <div className="mini-segment-marks">
+                {agendaItems.map((item, index) => {
+                  if (item.time === undefined || item.endTime === undefined) return null
+
+                  const leftPercent = (item.time / 1000 / duration) * 100
+                  const widthPercent = ((item.endTime - item.time) / 1000 / duration) * 100
+                  const isActive = index === currentSegmentIndex
+
+                  return (
+                    <Popover
+                      key={index}
+                      content={renderPopoverContent(item)}
+                      placement="top"
+                      trigger="hover"
+                      overlayClassName="segment-popover-overlay"
+                    >
+                      <div
+                        className={`mini-segment-mark ${isActive ? 'active' : ''}`}
+                        style={{
+                          left: `${leftPercent}%`,
+                          width: `${widthPercent}%`
+                        }}
+                        onMouseEnter={() => setHoveredSegment(index)}
+                        onMouseLeave={() => {
+                          setHoveredSegment(null)
+                          setHoveredTime(null)
+                        }}
+                        onClick={() => {
+                          if (videoRef.current && item.time !== undefined) {
+                            videoRef.current.currentTime = item.time / 1000
+                            onTimeUpdate(item.time / 1000)
+                          }
+                        }}
+                      />
+                    </Popover>
+                  )
+                })}
+              </div>
+              <Slider
+                className="mini-progress-slider"
+                min={0}
+                max={duration}
+                step={0.1}
+                value={currentTime}
+                onChange={handleSliderChange}
+                tooltip={{ formatter: (value) => formatTime(value || 0) }}
+              />
+            </div>
+          </div>
+
+          {/* 右侧：倍速 + 总时长 + 展开按钮 */}
+          <div className="mini-controls-right">
+            {/* 倍速控制 */}
+            <Dropdown menu={{ items: rateMenuItems }} placement="top" overlayClassName="rate-dropdown-menu">
+              <Button type="text" className="mini-rate-btn">倍速</Button>
+            </Dropdown>
+
+            {/* 总时长 */}
+            <span className="mini-total-time">{formatTime(duration)}</span>
+
+            {/* 展开视频按钮 */}
+            <Tooltip title="展开视频">
+              <Button
+                type="text"
+                className="mini-expand-btn"
+                icon={<DownOutlined rotate={180} />}
+                onClick={onToggleCollapse}
+              />
+            </Tooltip>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

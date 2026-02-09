@@ -20,6 +20,175 @@
   border-bottom: 1px solid #f0f0f0;
 }
 
+/* 底部迷你播放条 */
+.mini-player-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: #fff;
+  border-top: 1px solid #e8e8e8;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  z-index: 1000;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.mini-time-display {
+  min-width: 60px;
+  font-size: 13px;
+  color: #262626;
+  font-weight: 500;
+}
+
+.mini-controls-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 20px;
+}
+
+.mini-play-btn {
+  color: #605ce5 !important;
+  font-size: 28px !important;
+  padding: 0 !important;
+  height: 36px !important;
+  width: 36px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mini-play-btn:hover {
+  color: #4a3f8c !important;
+}
+
+.mini-control-btn {
+  color: #8c8c8c !important;
+  font-size: 16px !important;
+  padding: 4px !important;
+  height: 32px !important;
+  width: 32px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mini-control-btn:hover {
+  color: #605ce5 !important;
+}
+
+.mini-progress-container {
+  flex: 1;
+  position: relative;
+  height: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.mini-progress-hover-layer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 35;
+  cursor: pointer;
+  background: transparent;
+}
+
+.mini-progress-hover-anchor {
+  position: absolute;
+  top: -10px;
+  height: 1px;
+  width: 1px;
+  z-index: 36;
+}
+
+.mini-segment-marks {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  pointer-events: none;
+}
+
+.mini-segment-mark {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 4px;
+  background: rgba(96, 92, 229, 0.3);
+  border-radius: 2px;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mini-segment-mark:hover {
+  background: rgba(96, 92, 229, 0.6);
+}
+
+.mini-segment-mark.active {
+  background: #605ce5;
+}
+
+.mini-progress-slider {
+  flex: 1;
+  margin: 0 !important;
+}
+
+.mini-progress-slider .ant-slider-track {
+  background: #605ce5 !important;
+}
+
+.mini-progress-slider .ant-slider-handle {
+  border-color: #605ce5 !important;
+}
+
+.mini-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 140px;
+  justify-content: flex-end;
+}
+
+.mini-rate-btn {
+  color: #595959 !important;
+  font-size: 13px !important;
+  padding: 4px 8px !important;
+  height: 32px !important;
+}
+
+.mini-rate-btn:hover {
+  color: #605ce5 !important;
+}
+
+.mini-total-time {
+  font-size: 13px;
+  color: #8c8c8c;
+}
+
+.mini-expand-btn {
+  color: #8c8c8c !important;
+  font-size: 16px !important;
+  padding: 4px !important;
+  height: 32px !important;
+  width: 32px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mini-expand-btn:hover {
+  color: #605ce5 !important;
+}
+
 /* 顶部工具栏 */
 .player-toolbar {
   display: flex;
@@ -264,6 +433,26 @@
   height: 16px;
   display: flex;
   align-items: center;
+}
+
+/* 进度条悬停层：覆盖滑轨区域，用于触发章节浮窗 */
+.progress-hover-layer {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 0;
+  bottom: 0;
+  z-index: 35;
+  cursor: pointer;
+  background: transparent;
+}
+
+.progress-hover-anchor {
+  position: absolute;
+  top: -10px;
+  height: 1px;
+  width: 1px;
+  z-index: 36;
 }
 
 /* 分段标记容器 */

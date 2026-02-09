@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Layout, Spin, message } from 'antd'
 import VideoPlayer from './components/VideoPlayer'
 import TranscriptPanel from './components/TranscriptPanel'
@@ -31,7 +31,6 @@ function App() {
   const [isNotePanelOpen, setIsNotePanelOpen] = useState(false)
   const [notes, setNotes] = useState<NoteItem[]>([])
   const [isVideoCollapsed, setIsVideoCollapsed] = useState(false)
-  const videoRef = useRef<HTMLVideoElement>(null)
 
   // 加载数据
   useEffect(() => {
@@ -125,7 +124,7 @@ function App() {
   }
 
   // 截取视频帧
-  const captureVideoFrame = useCallback((video: HTMLVideoElement, time: number): string => {
+  const captureVideoFrame = useCallback((video: HTMLVideoElement): string => {
     const canvas = document.createElement('canvas')
     canvas.width = video.videoWidth || 640
     canvas.height = video.videoHeight || 360
@@ -146,7 +145,7 @@ function App() {
 
     // 如果有视频元素，截取当前帧
     if (videoRef && videoRef.readyState >= 2) {
-      const imageUrl = captureVideoFrame(videoRef, captureTime)
+      const imageUrl = captureVideoFrame(videoRef)
       if (imageUrl) {
         const newNote: NoteItem = {
           id: Date.now().toString(),
@@ -217,10 +216,6 @@ function App() {
                   paragraphs={parsedTranscript.pg}
                   currentTime={currentTime}
                   onTimeUpdate={handleTimeUpdate}
-                  onSentenceChange={(sentence) => {
-                    // 通知转写面板滚动到对应句子
-                    window.dispatchEvent(new CustomEvent('sentenceChange', { detail: sentence }))
-                  }}
                   isCollapsed={isVideoCollapsed}
                   onToggleCollapse={() => setIsVideoCollapsed(!isVideoCollapsed)}
                 />

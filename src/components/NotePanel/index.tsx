@@ -5,7 +5,6 @@ import {
   BoldOutlined, 
   ItalicOutlined, 
   UnderlineOutlined,
-  FontSizeOutlined,
   PictureOutlined
 } from '@ant-design/icons'
 import './index.css'
@@ -33,7 +32,6 @@ export default function NotePanel({
   isOpen, 
   onClose, 
   notes, 
-  onAddNote,
   onUpdateNote 
 }: NotePanelProps) {
   const [fontSize, setFontSize] = useState('14')
