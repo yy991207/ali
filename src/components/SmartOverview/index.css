@@ -197,16 +197,16 @@
   position: relative;
 }
 
+.agenda-item.playing {
+  background: #f0f0ff;
+}
+
 .agenda-item:hover,
 .agenda-item.selected {
-  background: #e8e6ff;
+  background: #e8e6ff !important;
   outline: 2px solid #605ce5;
   outline-offset: -2px;
   transform: translateY(-1px);
-}
-
-.agenda-item.playing {
-  background: #f0f0ff;
 }
 
 /* 左侧时间单元（时间戳 + 原点 + 虚线） */

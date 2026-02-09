@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Card, Tag, Timeline, Typography, Tabs, Button } from 'antd'
 import { ClockCircleOutlined, TagOutlined, FileTextOutlined, MessageOutlined, QuestionCircleOutlined, DownOutlined, UpOutlined } from '@ant-design/icons'
 import { AgendaItem, KeywordItem, RoleSummaryItem } from '../../types'
@@ -56,11 +56,21 @@ export default function SmartOverview({
     }
   }, [])
 
+  // 获取当前正在播放的章节ID（只取第一个匹配的）
+  const currentPlayingId = useMemo(() => {
+    for (const item of agendaItems) {
+      if (isActiveAgenda(item)) {
+        return item.id
+      }
+    }
+    return null
+  }, [agendaItems, currentTime])
+
   // 渲染章节速览列表
   const renderAgendaList = () => (
     <div className="agenda-list" ref={agendaListRef}>
       {agendaItems.map((item, index) => {
-        const isPlaying = isActiveAgenda(item)
+        const isPlaying = currentPlayingId === item.id
         const isSelected = selectedAgendaId === item.id
         const isLast = index === agendaItems.length - 1
 
