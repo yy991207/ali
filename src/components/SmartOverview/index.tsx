@@ -129,18 +129,50 @@ export default function SmartOverview({
         )
       })}
 
-      {/* 收起/展开按钮 */}
+      {/* 收起/展开按钮：位置与正文对齐，收起态展示“下一章时间” */}
       {agendaItems.length > DEFAULT_AGENDA_COUNT && (
-        <Button
-          type="link"
-          className="agenda-toggle-btn"
-          onClick={() => {
-            // 这里是纯前端 UI 展开/收起，不涉及异步，保持同步交互更顺滑
-            setAgendaExpanded(prev => !prev)
-          }}
-        >
-          {agendaExpanded ? '收起' : `展开全部章节（${hiddenAgendaCount}）`}
-        </Button>
+        agendaExpanded ? (
+          <div className="agenda-toggle-row expanded">
+            <div className="agenda-time-unit" />
+            <div className="agenda-content">
+              <Button
+                type="link"
+                className="agenda-toggle-btn"
+                onClick={() => {
+                  // 这里是纯前端 UI 展开/收起，不涉及异步，保持同步交互更顺滑
+                  setAgendaExpanded(false)
+                }}
+              >
+                收起
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="agenda-toggle-row collapsed">
+            <div className="agenda-time-unit">
+              <div className="agenda-time-row">
+                {agendaItems[DEFAULT_AGENDA_COUNT]?.time !== undefined && (
+                  <div className="agenda-time-left agenda-time-left-badge">
+                    {formatTimeFromMs(agendaItems[DEFAULT_AGENDA_COUNT]!.time!)}
+                  </div>
+                )}
+                <div className="timeline-dot" />
+              </div>
+            </div>
+            <div className="agenda-content">
+              <Button
+                type="link"
+                className="agenda-toggle-btn"
+                onClick={() => {
+                  // 这里是纯前端 UI 展开/收起，不涉及异步，保持同步交互更顺滑
+                  setAgendaExpanded(true)
+                }}
+              >
+                展开全部章节（{hiddenAgendaCount}）
+              </Button>
+            </div>
+          </div>
+        )
       )}
     </div>
   )

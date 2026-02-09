@@ -186,8 +186,16 @@
   gap: 0;
 }
 
+/* 章节速览收起/展开行：左侧时间列 + 右侧内容列，保证与正文对齐 */
+.agenda-toggle-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 8px 14px;
+}
+
 .agenda-toggle-btn {
-  padding: 10px 8px !important;
+  padding: 6px 0 !important;
   height: auto !important;
   font-size: 14px !important;
   color: #605ce5 !important;
@@ -197,6 +205,14 @@
 
 .agenda-toggle-btn:hover {
   color: #4a3f8c !important;
+}
+
+/* 收起态：时间戳要像一个小胶囊 */
+.agenda-time-left-badge {
+  background: #f5f5f5;
+  border-radius: 6px;
+  padding: 2px 8px;
+  line-height: 18px;
 }
 
 .agenda-item {
