@@ -209,13 +209,6 @@ export default function TranscriptPanel({
     }
   }, [currentGroup, forceScrollGroup, forceScrollSentence])
 
-  // 处理组点击
-  const handleGroupClick = (group: SpeakerGroup) => {
-    // 点击选中：同一时间只允许一个段落处于“选中态”
-    setSelectedGroupId(group.id)
-    onSentenceClick?.(group.startTime)
-  }
-
   // 处理文本选中后的浮窗菜单
   const handleTextSelection = useCallback((group: SpeakerGroup, containerEl: HTMLElement | null) => {
     if (!containerEl) return
@@ -319,6 +312,18 @@ export default function TranscriptPanel({
     setSelectedGroupId(group.id)
     onSentenceClick?.(group.startTime)
   }, [onSentenceClick])
+
+  // 监听标记事件，同步本地标记态（避免点击标记触发全列表重渲染）
+  useEffect(() => {
+    const handleTranscriptMarkChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ groupId: string; type: MarkType; timeMs: number; text: string }>).detail
+      if (!detail?.groupId) return
+      setGroupMarks(prev => ({ ...prev, [detail.groupId]: detail.type }))
+    }
+
+    window.addEventListener('transcriptMarkChange', handleTranscriptMarkChange)
+    return () => window.removeEventListener('transcriptMarkChange', handleTranscriptMarkChange)
+  }, [])
 
   const handleTextMouseUp = useCallback((group: SpeakerGroup, el: HTMLElement) => {
     isSelectingRef.current = false
@@ -492,6 +497,7 @@ const SpeakerGroupItem = memo(function SpeakerGroupItem({
   previewText,
   activeGroupRef,
   onSelect,
+  onMarkChange,
   onTextMouseUp,
   onTextMouseDown
 }: {
@@ -501,7 +507,7 @@ const SpeakerGroupItem = memo(function SpeakerGroupItem({
   markType: MarkType
   markedClassName: string
   previewText: string
-  activeGroupRef: React.RefObject<HTMLDivElement>
+  activeGroupRef: React.RefObject<HTMLDivElement | null>
   onSelect: (group: SpeakerGroup) => void
   onTextMouseUp: (group: SpeakerGroup, el: HTMLElement) => void
   onTextMouseDown: () => void
