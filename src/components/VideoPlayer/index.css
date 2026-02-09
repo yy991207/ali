@@ -176,8 +176,17 @@
   background: #605ce5 !important;
   width: 12px !important;
   height: 12px !important;
-  margin-top: -4px !important;
+  margin-top: 0 !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
   z-index: 60;
+  border-radius: 50% !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.95), 0 2px 8px rgba(0, 0, 0, 0.18) !important;
+}
+
+.mini-progress-slider .ant-slider-handle::before,
+.mini-progress-slider .ant-slider-handle::after {
+  display: none !important;
 }
 
 .mini-controls-right {
@@ -600,7 +609,16 @@
   background: #605ce5;
   width: 12px;
   height: 12px;
-  margin-top: -4px;
+  margin-top: 0;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.95), 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.progress-slider :global(.ant-slider-handle::before),
+.progress-slider :global(.ant-slider-handle::after) {
+  display: none;
 }
 
 .progress-slider :global(.ant-slider-step) {
