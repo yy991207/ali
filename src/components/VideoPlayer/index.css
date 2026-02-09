@@ -82,7 +82,7 @@
 .mini-progress-container {
   flex: 1;
   position: relative;
-  height: 20px;
+  height: 22px;
   display: flex;
   align-items: center;
 }
@@ -125,6 +125,7 @@
   right: 0;
   height: 100%;
   pointer-events: none;
+  z-index: 10;
 }
 
 .mini-segment-mark {
@@ -132,7 +133,7 @@
   top: 50%;
   transform: translateY(-50%);
   height: 4px;
-  background: rgba(96, 92, 229, 0.3);
+  background: rgba(180, 176, 255, 0.55);
   border-radius: 2px;
   pointer-events: auto;
   cursor: pointer;
@@ -140,7 +141,15 @@
 }
 
 .mini-segment-mark:hover {
-  background: rgba(96, 92, 229, 0.6);
+  background: rgba(96, 92, 229, 0.85);
+}
+
+.mini-segment-mark.unplayed {
+  background: rgba(180, 176, 255, 0.55);
+}
+
+.mini-segment-mark.played {
+  background: rgba(96, 92, 229, 0.9);
 }
 
 .mini-segment-mark.active {
@@ -148,8 +157,14 @@
 }
 
 .mini-progress-slider {
+  position: relative;
   flex: 1;
   margin: 0 !important;
+  z-index: 20;
+}
+
+.mini-progress-slider .ant-slider-rail {
+  background: rgba(180, 176, 255, 0.55) !important;
 }
 
 .mini-progress-slider .ant-slider-track {
@@ -158,6 +173,11 @@
 
 .mini-progress-slider .ant-slider-handle {
   border-color: #605ce5 !important;
+  background: #605ce5 !important;
+  width: 12px !important;
+  height: 12px !important;
+  margin-top: -4px !important;
+  z-index: 60;
 }
 
 .mini-controls-right {
@@ -437,12 +457,12 @@
 
 /* 进度条区域 */
 .progress-section {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .progress-container {
   position: relative;
-  height: 16px;
+  height: 22px;
   display: flex;
   align-items: center;
 }
@@ -455,7 +475,7 @@
   right: 10px;
   height: 12px;
   transform: translateY(-50%);
-  z-index: 37;
+  z-index: 15;
   pointer-events: auto;
 }
 
@@ -489,7 +509,7 @@
   right: 10px;
   top: 0;
   bottom: 0;
-  z-index: 35;
+  z-index: 18;
   cursor: pointer;
   background: transparent;
 }
@@ -511,13 +531,13 @@
   height: 4px;
   transform: translateY(-50%);
   pointer-events: none;
-  z-index: 30;
+  z-index: 10;
 }
 
 .segment-mark {
   position: absolute;
   height: 100%;
-  background: rgba(96, 92, 229, 0.6);
+  background: rgba(180, 176, 255, 0.55);
   border-radius: 2px;
   cursor: pointer;
   pointer-events: auto;
@@ -525,9 +545,17 @@
   min-width: 2px;
 }
 
+.segment-mark.unplayed {
+  background: rgba(180, 176, 255, 0.55);
+}
+
+.segment-mark.played {
+  background: rgba(96, 92, 229, 0.9);
+}
+
 .segment-mark:hover,
 .segment-mark.hovered {
-  background: rgba(96, 92, 229, 0.9);
+  background: rgba(96, 92, 229, 0.95);
   height: 8px;
   top: -2px;
 }
@@ -540,9 +568,10 @@
 
 /* 进度滑块 */
 .progress-slider {
+  position: relative;
   flex: 1;
   margin: 0;
-  z-index: 20;
+  z-index: 30;
   pointer-events: none;
 }
 
@@ -553,11 +582,11 @@
 
 .progress-slider :global(.ant-slider-handle) {
   pointer-events: auto;
-  z-index: 40;
+  z-index: 60;
 }
 
 .progress-slider :global(.ant-slider-rail) {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(180, 176, 255, 0.35);
   height: 4px;
 }
 

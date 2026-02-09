@@ -74,6 +74,8 @@ export default function VideoPlayer({
   const [showControls, setShowControls] = useState(true)
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [transcriptMarks, setTranscriptMarks] = useState<TranscriptMark[]>([])
+
+  const SEGMENT_GAP_PX = 6
   
   // 筛选状态
   const [showMarkedOnly, setShowMarkedOnly] = useState(false)
@@ -629,6 +631,7 @@ export default function VideoPlayer({
                 const widthPercent = ((item.endTime - item.time) / 1000 / duration) * 100
                 const isActive = index === currentSegmentIndex
                 const isHovered = index === hoveredSegment
+                const isPlayed = currentTime * 1000 >= item.endTime
 
                 // 处理鼠标移动，计算当前鼠标位置对应的时间
                 const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -648,10 +651,10 @@ export default function VideoPlayer({
                     overlayClassName="segment-popover-overlay"
                   >
                     <div
-                      className={`segment-mark ${isActive ? 'active' : ''} ${isHovered ? 'hovered' : ''}`}
+                      className={`segment-mark ${isPlayed ? 'played' : 'unplayed'} ${isActive ? 'active' : ''} ${isHovered ? 'hovered' : ''}`}
                       style={{
-                        left: `${leftPercent}%`,
-                        width: `${widthPercent}%`
+                        left: `calc(${leftPercent}% + ${SEGMENT_GAP_PX / 2}px)`,
+                        width: `calc(${widthPercent}% - ${SEGMENT_GAP_PX}px)`
                       }}
                       onMouseEnter={() => setHoveredSegment(index)}
                       onMouseLeave={() => {
@@ -906,6 +909,7 @@ export default function VideoPlayer({
                   const leftPercent = (item.time / 1000 / duration) * 100
                   const widthPercent = ((item.endTime - item.time) / 1000 / duration) * 100
                   const isActive = index === currentSegmentIndex
+                  const isPlayed = currentTime * 1000 >= item.endTime
 
                   return (
                     <Popover
@@ -916,10 +920,10 @@ export default function VideoPlayer({
                       overlayClassName="segment-popover-overlay"
                     >
                       <div
-                        className={`mini-segment-mark ${isActive ? 'active' : ''}`}
+                        className={`mini-segment-mark ${isPlayed ? 'played' : 'unplayed'} ${isActive ? 'active' : ''}`}
                         style={{
-                          left: `${leftPercent}%`,
-                          width: `${widthPercent}%`
+                          left: `calc(${leftPercent}% + ${SEGMENT_GAP_PX / 2}px)`,
+                          width: `calc(${widthPercent}% - ${SEGMENT_GAP_PX}px)`
                         }}
                         onMouseEnter={() => setHoveredSegment(index)}
                         onMouseLeave={() => {
