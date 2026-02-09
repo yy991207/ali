@@ -197,13 +197,15 @@
   position: relative;
 }
 
-.agenda-item:hover {
-  background: #f5f5ff;
-  box-shadow: 0 2px 12px rgba(96, 92, 229, 0.1);
+.agenda-item:hover,
+.agenda-item.selected {
+  background: #e8e6ff;
+  outline: 2px solid #605ce5;
+  outline-offset: -2px;
   transform: translateY(-1px);
 }
 
-.agenda-item.active {
+.agenda-item.playing {
   background: #f0f0ff;
 }
 

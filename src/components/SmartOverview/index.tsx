@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Card, Tag, Timeline, Typography, Tabs, Button } from 'antd'
 import { ClockCircleOutlined, TagOutlined, FileTextOutlined, MessageOutlined, QuestionCircleOutlined, DownOutlined, UpOutlined } from '@ant-design/icons'
 import { AgendaItem, KeywordItem, RoleSummaryItem } from '../../types'
@@ -27,6 +27,8 @@ export default function SmartOverview({
   const [activeTab, setActiveTab] = useState('agenda')
   const [summaryExpanded, setSummaryExpanded] = useState(false)
   const [keywordsExpanded, setKeywordsExpanded] = useState(false)
+  const [selectedAgendaId, setSelectedAgendaId] = useState<number | null>(null)
+  const agendaListRef = useRef<HTMLDivElement>(null)
 
   // 默认显示的关键词数量
   const DEFAULT_KEYWORDS_COUNT = 8
@@ -40,18 +42,37 @@ export default function SmartOverview({
     return currentMs >= item.time && currentMs <= item.endTime
   }
 
+  // 处理点击外部取消选中
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (agendaListRef.current && !agendaListRef.current.contains(event.target as Node)) {
+        setSelectedAgendaId(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
   // 渲染章节速览列表
   const renderAgendaList = () => (
-    <div className="agenda-list">
+    <div className="agenda-list" ref={agendaListRef}>
       {agendaItems.map((item, index) => {
-        const isActive = isActiveAgenda(item)
+        const isPlaying = isActiveAgenda(item)
+        const isSelected = selectedAgendaId === item.id
         const isLast = index === agendaItems.length - 1
 
         return (
           <div
             key={item.id}
-            className={`agenda-item ${isActive ? 'active' : ''}`}
-            onClick={() => onAgendaClick?.(item)}
+            className={`agenda-item ${isPlaying ? 'playing' : ''} ${isSelected ? 'selected' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              setSelectedAgendaId(item.id)
+              onAgendaClick?.(item)
+            }}
           >
             {/* 左侧时间单元（时间戳 + 原点 + 虚线） */}
             <div className="agenda-time-unit">
@@ -61,7 +82,7 @@ export default function SmartOverview({
                     {formatTimeFromMs(item.time)}
                   </div>
                 )}
-                <div className={`timeline-dot ${isActive ? 'active' : ''}`} />
+                <div className={`timeline-dot ${isSelected ? 'active' : ''}`} />
               </div>
               {!isLast && <div className="timeline-line" />}
             </div>
@@ -69,7 +90,7 @@ export default function SmartOverview({
             {/* 内容区域 */}
             <div className="agenda-content">
               <div className="agenda-header">
-                <Text className="agenda-title" strong={isActive}>
+                <Text className="agenda-title" strong={isPlaying}>
                   {item.value}
                 </Text>
                 {/* 回顾图标 */}
