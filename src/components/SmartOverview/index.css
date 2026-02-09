@@ -180,23 +180,80 @@
 }
 
 /* 章节速览样式 */
-.agenda-timeline {
-  padding-top: 4px;
+.agenda-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .agenda-item {
   cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  padding: 12px 8px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  position: relative;
 }
 
 .agenda-item:hover {
-  background: #f5f5f5;
+  background: #f5f5ff;
+  box-shadow: 0 2px 12px rgba(96, 92, 229, 0.1);
+  transform: translateY(-1px);
 }
 
 .agenda-item.active {
   background: #f0f0ff;
+}
+
+/* 左侧时间单元（时间戳 + 原点 + 虚线） */
+.agenda-time-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 80px;
+  flex-shrink: 0;
+}
+
+/* 时间戳和原点一行 */
+.agenda-time-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 时间戳 */
+.agenda-time-left {
+  font-size: 13px;
+  color: #8c8c8c;
+  text-align: right;
+}
+
+.timeline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d9d9d9;
+  flex-shrink: 0;
+}
+
+.timeline-dot.active {
+  background: #605ce5;
+}
+
+.timeline-line {
+  width: 1px;
+  flex: 1;
+  border-left: 1px dashed #d9d9d9;
+  margin: 4px 0;
+  min-height: 40px;
+}
+
+/* 内容区域 */
+.agenda-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .agenda-header {
@@ -204,31 +261,40 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 8px;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
 .agenda-title {
   font-size: 14px;
   flex: 1;
+  color: #262626;
 }
 
 .agenda-item.active .agenda-title {
   color: #605ce5;
 }
 
-.agenda-time {
+/* 回顾图标 */
+.review-icon {
   font-size: 12px;
-  color: #8c8c8c;
-  background: #f5f5f5;
-  border: none;
+  color: #605ce5;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
   flex-shrink: 0;
+}
+
+.agenda-item:hover .review-icon {
+  opacity: 1;
 }
 
 .agenda-summary {
   font-size: 13px;
   color: #8c8c8c;
   margin-bottom: 0 !important;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 /* 发言总结样式 */

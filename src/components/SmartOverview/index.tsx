@@ -40,41 +40,59 @@ export default function SmartOverview({
     return currentMs >= item.time && currentMs <= item.endTime
   }
 
-  // 构建 Timeline items 数组
-  const timelineItems = agendaItems.map((item) => {
-    const isActive = isActiveAgenda(item)
-    
-    return {
-      key: item.id,
-      color: isActive ? '#605ce5' : 'gray',
-      children: (
-        <div 
-          className={`agenda-item ${isActive ? 'active' : ''}`}
-          onClick={() => onAgendaClick?.(item)}
-        >
-          <div className="agenda-header">
-            <Text className="agenda-title" strong={isActive}>
-              {item.value}
-            </Text>
-            {item.time !== undefined && (
-              <Tag className="agenda-time">
-                {formatTimeFromMs(item.time)}
-              </Tag>
-            )}
+  // 渲染章节速览列表
+  const renderAgendaList = () => (
+    <div className="agenda-list">
+      {agendaItems.map((item, index) => {
+        const isActive = isActiveAgenda(item)
+        const isLast = index === agendaItems.length - 1
+
+        return (
+          <div
+            key={item.id}
+            className={`agenda-item ${isActive ? 'active' : ''}`}
+            onClick={() => onAgendaClick?.(item)}
+          >
+            {/* 左侧时间单元（时间戳 + 原点 + 虚线） */}
+            <div className="agenda-time-unit">
+              <div className="agenda-time-row">
+                {item.time !== undefined && (
+                  <div className="agenda-time-left">
+                    {formatTimeFromMs(item.time)}
+                  </div>
+                )}
+                <div className={`timeline-dot ${isActive ? 'active' : ''}`} />
+              </div>
+              {!isLast && <div className="timeline-line" />}
+            </div>
+
+            {/* 内容区域 */}
+            <div className="agenda-content">
+              <div className="agenda-header">
+                <Text className="agenda-title" strong={isActive}>
+                  {item.value}
+                </Text>
+                {/* 回顾图标 */}
+                <span className="review-icon">
+                  <ClockCircleOutlined />
+                  回顾
+                </span>
+              </div>
+
+              {item.summary && (
+                <Paragraph
+                  className="agenda-summary"
+                  ellipsis={{ rows: 2 }}
+                >
+                  {item.summary}
+                </Paragraph>
+              )}
+            </div>
           </div>
-          
-          {item.summary && (
-            <Paragraph 
-              className="agenda-summary"
-              ellipsis={{ rows: 2 }}
-            >
-              {item.summary}
-            </Paragraph>
-          )}
-        </div>
-      )
-    }
-  })
+        )
+      })}
+    </div>
+  )
 
   const tabItems = [
     {
@@ -85,9 +103,7 @@ export default function SmartOverview({
           章节速览
         </span>
       ),
-      children: (
-        <Timeline className="agenda-timeline" items={timelineItems} />
-      )
+      children: renderAgendaList()
     },
     {
       key: 'summary',
