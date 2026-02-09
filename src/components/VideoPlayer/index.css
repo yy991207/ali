@@ -89,6 +89,18 @@
   align-items: center;
 }
 
+/* 迷你进度条用户标记层 */
+.mini-user-mark-layer {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 12px;
+  transform: translateY(-50%);
+  z-index: 37;
+  pointer-events: auto;
+}
+
 .mini-progress-hover-layer {
   position: absolute;
   left: 0;
@@ -433,6 +445,41 @@
   height: 16px;
   display: flex;
   align-items: center;
+}
+
+/* 用户标记层（来自转写文本） */
+.user-mark-layer {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  right: 10px;
+  height: 12px;
+  transform: translateY(-50%);
+  z-index: 37;
+  pointer-events: auto;
+}
+
+.user-mark {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px;
+  height: 12px;
+  border-radius: 2px;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.user-mark-important {
+  background: #74d2ff;
+}
+
+.user-mark-question {
+  background: #ff7db8;
+}
+
+.user-mark-todo {
+  background: #ffd24a;
 }
 
 /* 进度条悬停层：覆盖滑轨区域，用于触发章节浮窗 */

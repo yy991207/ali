@@ -23,6 +23,14 @@ import { AgendaItem, TranscriptParagraph } from '../../types'
 import { formatTime, formatTimeFromMs } from '../../utils/time'
 import './index.css'
 
+type TranscriptMarkType = 'important' | 'question' | 'todo'
+interface TranscriptMark {
+  groupId: string
+  type: TranscriptMarkType
+  timeMs: number
+  text: string
+}
+
 interface VideoPlayerProps {
   videoUrl: string
   audioUrl: string
@@ -64,6 +72,7 @@ export default function VideoPlayer({
   const [subtitleColor, setSubtitleColor] = useState<'dark' | 'light'>('dark')
   const [showControls, setShowControls] = useState(true)
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [transcriptMarks, setTranscriptMarks] = useState<TranscriptMark[]>([])
   
   // 筛选状态
   const [showMarkedOnly, setShowMarkedOnly] = useState(false)
@@ -421,6 +430,38 @@ export default function VideoPlayer({
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
   }, [])
 
+  // 监听转写文本“标记”事件，在进度条上增加对应标记 UI
+  useEffect(() => {
+	    const handleTranscriptMarkChange = (event: Event) => {
+	      const detail = (event as CustomEvent<{ groupId: string; type: TranscriptMarkType | null; timeMs: number; text: string }>).detail
+	      if (!detail?.groupId) return
+	      const markType = detail.type
+
+	      // 取消标记：移除该 group 的标记
+	      if (!markType) {
+	        setTranscriptMarks(prev => prev.filter(m => m.groupId !== detail.groupId))
+	        return
+	      }
+
+	      setTranscriptMarks(prev => {
+	        const nextItem: TranscriptMark = {
+	          groupId: detail.groupId,
+	          type: markType,
+	          timeMs: detail.timeMs,
+	          text: detail.text
+	        }
+        const existedIndex = prev.findIndex(m => m.groupId === detail.groupId)
+        if (existedIndex === -1) return [...prev, nextItem]
+        const next = [...prev]
+        next[existedIndex] = nextItem
+        return next
+      })
+    }
+
+    window.addEventListener('transcriptMarkChange', handleTranscriptMarkChange)
+    return () => window.removeEventListener('transcriptMarkChange', handleTranscriptMarkChange)
+  }, [])
+
   return (
     <div
       className={`video-player ${isCollapsed ? 'collapsed' : ''}`}
@@ -497,6 +538,27 @@ export default function VideoPlayer({
         {/* 进度条区域 */}
         <div className="progress-section">
           <div className="progress-container">
+            {/* 用户标记（来自转写文本） */}
+            <div className="user-mark-layer">
+              {transcriptMarks.map((mark) => {
+                const leftPercent = (mark.timeMs / 1000 / duration) * 100
+                if (!Number.isFinite(leftPercent)) return null
+                return (
+                  <Tooltip
+                    key={mark.groupId}
+                    title={mark.text}
+                    placement="top"
+                    overlayClassName="mark-tooltip-overlay"
+                  >
+                    <div
+                      className={`user-mark user-mark-${mark.type}`}
+                      style={{ left: `${leftPercent}%` }}
+                    />
+                  </Tooltip>
+                )
+              })}
+            </div>
+
             {/* 进度条整体悬停浮窗锚点（参考分段进度条浮窗逻辑） */}
             {(() => {
               if (!isHoveringProgressBar || hoveredBarTime === null) return null
@@ -755,6 +817,27 @@ export default function VideoPlayer({
 
             {/* 分段进度条 */}
             <div className="mini-progress-container">
+              {/* 用户标记（来自转写文本） */}
+              <div className="mini-user-mark-layer">
+                {transcriptMarks.map((mark) => {
+                  const leftPercent = (mark.timeMs / 1000 / duration) * 100
+                  if (!Number.isFinite(leftPercent)) return null
+                  return (
+                    <Tooltip
+                      key={mark.groupId}
+                      title={mark.text}
+                      placement="top"
+                      overlayClassName="mark-tooltip-overlay"
+                    >
+                      <div
+                        className={`user-mark user-mark-${mark.type}`}
+                        style={{ left: `${leftPercent}%` }}
+                      />
+                    </Tooltip>
+                  )
+                })}
+              </div>
+
               {/* 迷你进度条整体悬停浮窗锚点 */}
               {(() => {
                 if (!isHoveringProgressBar || hoveredBarTime === null) return null

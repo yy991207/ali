@@ -1,5 +1,6 @@
 import { useMemo, useRef, useEffect, useState } from 'react'
-import { Card, Typography, Tag } from 'antd'
+import { Card, Typography, Tag, Tooltip, Button } from 'antd'
+import { PushpinOutlined, QuestionCircleOutlined, CheckCircleOutlined, StopOutlined } from '@ant-design/icons'
 import { TranscriptParagraph, TranscriptSentence } from '../../types'
 import { formatTimeFromMs } from '../../utils/time'
 import './index.css'
@@ -22,6 +23,8 @@ interface TranscriptPanelProps {
   onSentenceClick?: (time: number) => void
 }
 
+type MarkType = 'important' | 'question' | 'todo' | null
+
 export default function TranscriptPanel({
   paragraphs,
   currentTime,
@@ -30,6 +33,8 @@ export default function TranscriptPanel({
   const containerRef = useRef<HTMLDivElement>(null)
   const activeGroupRef = useRef<HTMLDivElement>(null)
   const [forceScrollSentence, setForceScrollSentence] = useState<TranscriptSentence | null>(null)
+  const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null)
+  const [groupMarks, setGroupMarks] = useState<Record<string, MarkType>>({})
 
   // 将所有句子按发言人合并成组（连续的同一个人说的话合并）
   const speakerGroups = useMemo(() => {
@@ -140,14 +145,96 @@ export default function TranscriptPanel({
           const isActive = currentGroup?.id === group.id
           const isForceActive = forceScrollGroup?.id === group.id
           const shouldHighlight = isActive || isForceActive
+          const isHovered = hoveredGroupId === group.id
+          const markType = groupMarks[group.id] ?? null
+          const markedClassName = markType ? `marked-${markType}` : ''
+          const previewText = group.text.length > 18 ? `${group.text.slice(0, 18)}...` : group.text
 
           return (
             <div
               key={group.id}
               ref={shouldHighlight ? activeGroupRef : null}
-              className={`speaker-group ${shouldHighlight ? 'active' : ''}`}
+              className={`speaker-group ${shouldHighlight ? 'active' : ''} ${isHovered ? 'hovered' : ''}`}
               onClick={() => handleGroupClick(group)}
+              onMouseEnter={() => setHoveredGroupId(group.id)}
+              onMouseLeave={() => setHoveredGroupId(prev => (prev === group.id ? null : prev))}
             >
+              {/* 右上角标记按钮：仅 hover 时显示 */}
+              <div className={`group-actions ${isHovered ? 'visible' : ''}`} onClick={(e) => e.stopPropagation()}>
+                <Tooltip
+                  title="标记为重点"
+                  placement="top"
+                  overlayClassName="mark-tooltip-overlay"
+                >
+                  <Button
+                    type="text"
+                    size="small"
+                    className={`mark-btn mark-important ${markType === 'important' ? 'active' : ''}`}
+                    icon={<PushpinOutlined />}
+                    onClick={() => {
+                      setGroupMarks(prev => ({ ...prev, [group.id]: 'important' }))
+                      window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
+                        detail: { groupId: group.id, type: 'important', timeMs: group.startTime, text: previewText }
+                      }))
+                    }}
+                  />
+                </Tooltip>
+                <Tooltip
+                  title="标记为问题"
+                  placement="top"
+                  overlayClassName="mark-tooltip-overlay"
+                >
+                  <Button
+                    type="text"
+                    size="small"
+                    className={`mark-btn mark-question ${markType === 'question' ? 'active' : ''}`}
+                    icon={<QuestionCircleOutlined />}
+                    onClick={() => {
+                      setGroupMarks(prev => ({ ...prev, [group.id]: 'question' }))
+                      window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
+                        detail: { groupId: group.id, type: 'question', timeMs: group.startTime, text: previewText }
+                      }))
+                    }}
+                  />
+                </Tooltip>
+                <Tooltip
+                  title="标记为待办"
+                  placement="top"
+                  overlayClassName="mark-tooltip-overlay"
+                >
+                  <Button
+                    type="text"
+                    size="small"
+                    className={`mark-btn mark-todo ${markType === 'todo' ? 'active' : ''}`}
+                    icon={<CheckCircleOutlined />}
+                    onClick={() => {
+                      setGroupMarks(prev => ({ ...prev, [group.id]: 'todo' }))
+                      window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
+                        detail: { groupId: group.id, type: 'todo', timeMs: group.startTime, text: previewText }
+                      }))
+                    }}
+                  />
+                </Tooltip>
+                <Tooltip
+                  title="取消标记"
+                  placement="top"
+                  overlayClassName="mark-tooltip-overlay"
+                >
+                  <Button
+                    type="text"
+                    size="small"
+                    className="mark-btn mark-clear"
+                    icon={<StopOutlined />}
+                    onClick={() => {
+                      setGroupMarks(prev => ({ ...prev, [group.id]: null }))
+                      window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
+                        detail: { groupId: group.id, type: null, timeMs: group.startTime, text: previewText }
+                      }))
+                    }}
+                  />
+                </Tooltip>
+              </div>
+
               {/* 头部信息：时间戳和发言人 */}
               <div className="group-header">
                 <Tag className="timestamp">
@@ -159,7 +246,7 @@ export default function TranscriptPanel({
               </div>
 
               {/* 文本内容 */}
-              <Text className="group-text">{group.text}</Text>
+              <Text className={`group-text ${markedClassName}`}>{group.text}</Text>
             </div>
           )
         })}
