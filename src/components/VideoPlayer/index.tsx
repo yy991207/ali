@@ -327,39 +327,97 @@ export default function VideoPlayer({
 
   // 跳转到上一段
   const jumpToPrevSegment = useCallback(() => {
-    if (!videoRef.current || agendaItems.length === 0) return
+    console.log('[上一章] 点击了上一章按钮')
+    console.log('[上一章] videoRef.current:', videoRef.current)
+    console.log('[上一章] agendaItems.length:', agendaItems.length)
+    
+    if (!videoRef.current || agendaItems.length === 0) {
+      console.log('[上一章] 条件不满足，直接返回')
+      return
+    }
     
     const currentMs = videoRef.current.currentTime * 1000
-    const currentIndex = agendaItems.findIndex(
-      item => item.time !== undefined && item.endTime !== undefined && 
-              currentMs >= item.time && currentMs <= item.endTime
-    )
+    console.log('[上一章] 当前时间(ms):', currentMs)
+    
+    // 查找当前所在的章节 - 使用更精确的逻辑
+    let currentIndex = -1
+    for (let i = 0; i < agendaItems.length; i++) {
+      const item = agendaItems[i]
+      if (item.time !== undefined && item.endTime !== undefined) {
+        // 使用一个小的时间偏移量来避免边界问题
+        if (currentMs >= item.time && currentMs < item.endTime - 100) {
+          currentIndex = i
+          break
+        }
+      }
+    }
+    // 如果没找到，可能是正好在边界上，尝试宽松匹配
+    if (currentIndex === -1) {
+      currentIndex = agendaItems.findIndex(
+        item => item.time !== undefined && item.endTime !== undefined && 
+                currentMs >= item.time && currentMs <= item.endTime
+      )
+    }
+    console.log('[上一章] 当前章节索引:', currentIndex)
     
     if (currentIndex > 0) {
       const prevItem = agendaItems[currentIndex - 1]
+      console.log('[上一章] 上一章节:', prevItem)
       if (prevItem.time !== undefined) {
         videoRef.current.currentTime = prevItem.time / 1000
         onTimeUpdate(prevItem.time / 1000)
+        console.log('[上一章] 跳转完成，跳转到:', prevItem.time / 1000)
       }
+    } else {
+      console.log('[上一章] 已经是第一章，无法跳转')
     }
   }, [agendaItems, onTimeUpdate])
 
   // 跳转到下一段
   const jumpToNextSegment = useCallback(() => {
-    if (!videoRef.current || agendaItems.length === 0) return
+    console.log('[下一章] 点击了下一章按钮')
+    console.log('[下一章] videoRef.current:', videoRef.current)
+    console.log('[下一章] agendaItems.length:', agendaItems.length)
+    
+    if (!videoRef.current || agendaItems.length === 0) {
+      console.log('[下一章] 条件不满足，直接返回')
+      return
+    }
     
     const currentMs = videoRef.current.currentTime * 1000
-    const currentIndex = agendaItems.findIndex(
-      item => item.time !== undefined && item.endTime !== undefined && 
-              currentMs >= item.time && currentMs <= item.endTime
-    )
+    console.log('[下一章] 当前时间(ms):', currentMs)
+    
+    // 查找当前所在的章节 - 使用更精确的逻辑
+    let currentIndex = -1
+    for (let i = 0; i < agendaItems.length; i++) {
+      const item = agendaItems[i]
+      if (item.time !== undefined && item.endTime !== undefined) {
+        // 使用一个小的时间偏移量来避免边界问题
+        if (currentMs >= item.time && currentMs < item.endTime - 100) {
+          currentIndex = i
+          break
+        }
+      }
+    }
+    // 如果没找到，可能是正好在边界上，尝试宽松匹配
+    if (currentIndex === -1) {
+      currentIndex = agendaItems.findIndex(
+        item => item.time !== undefined && item.endTime !== undefined && 
+                currentMs >= item.time && currentMs <= item.endTime
+      )
+    }
+    console.log('[下一章] 当前章节索引:', currentIndex)
     
     if (currentIndex < agendaItems.length - 1) {
       const nextItem = agendaItems[currentIndex + 1]
+      console.log('[下一章] 下一章节:', nextItem)
       if (nextItem.time !== undefined) {
         videoRef.current.currentTime = nextItem.time / 1000
         onTimeUpdate(nextItem.time / 1000)
+        console.log('[下一章] 跳转完成，跳转到:', nextItem.time / 1000)
       }
+    } else {
+      console.log('[下一章] 已经是最后一章，无法跳转')
     }
   }, [agendaItems, onTimeUpdate])
 
