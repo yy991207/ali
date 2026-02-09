@@ -313,16 +313,11 @@ export default function TranscriptPanel({
     onSentenceClick?.(group.startTime)
   }, [onSentenceClick])
 
-  // 监听标记事件，同步本地标记态（避免点击标记触发全列表重渲染）
-  useEffect(() => {
-    const handleTranscriptMarkChange = (event: Event) => {
-      const detail = (event as CustomEvent<{ groupId: string; type: MarkType; timeMs: number; text: string }>).detail
-      if (!detail?.groupId) return
-      setGroupMarks(prev => ({ ...prev, [detail.groupId]: detail.type }))
-    }
-
-    window.addEventListener('transcriptMarkChange', handleTranscriptMarkChange)
-    return () => window.removeEventListener('transcriptMarkChange', handleTranscriptMarkChange)
+  const handleMarkChange = useCallback((group: SpeakerGroup, type: MarkType, previewText: string) => {
+    setGroupMarks(prev => ({ ...prev, [group.id]: type }))
+    window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
+      detail: { groupId: group.id, type, timeMs: group.startTime, text: previewText }
+    }))
   }, [])
 
   const handleTextMouseUp = useCallback((group: SpeakerGroup, el: HTMLElement) => {
@@ -478,6 +473,7 @@ export default function TranscriptPanel({
               previewText={previewText}
               activeGroupRef={activeGroupRef}
               onSelect={handleGroupClickStable}
+              onMarkChange={handleMarkChange}
               onTextMouseUp={handleTextMouseUp}
               onTextMouseDown={handleTextMouseDown}
             />
@@ -509,6 +505,7 @@ const SpeakerGroupItem = memo(function SpeakerGroupItem({
   previewText: string
   activeGroupRef: React.RefObject<HTMLDivElement | null>
   onSelect: (group: SpeakerGroup) => void
+  onMarkChange: (group: SpeakerGroup, type: MarkType, previewText: string) => void
   onTextMouseUp: (group: SpeakerGroup, el: HTMLElement) => void
   onTextMouseDown: () => void
 }) {
@@ -527,9 +524,7 @@ const SpeakerGroupItem = memo(function SpeakerGroupItem({
             className={`mark-btn mark-important ${markType === 'important' ? 'active' : ''}`}
             icon={<PushpinOutlined />}
             onClick={() => {
-              window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
-                detail: { groupId: group.id, type: 'important', timeMs: group.startTime, text: previewText }
-              }))
+              onMarkChange(group, 'important', previewText)
             }}
           />
         </Tooltip>
@@ -540,9 +535,7 @@ const SpeakerGroupItem = memo(function SpeakerGroupItem({
             className={`mark-btn mark-question ${markType === 'question' ? 'active' : ''}`}
             icon={<QuestionCircleOutlined />}
             onClick={() => {
-              window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
-                detail: { groupId: group.id, type: 'question', timeMs: group.startTime, text: previewText }
-              }))
+              onMarkChange(group, 'question', previewText)
             }}
           />
         </Tooltip>
@@ -553,9 +546,7 @@ const SpeakerGroupItem = memo(function SpeakerGroupItem({
             className={`mark-btn mark-todo ${markType === 'todo' ? 'active' : ''}`}
             icon={<CheckCircleOutlined />}
             onClick={() => {
-              window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
-                detail: { groupId: group.id, type: 'todo', timeMs: group.startTime, text: previewText }
-              }))
+              onMarkChange(group, 'todo', previewText)
             }}
           />
         </Tooltip>
@@ -566,9 +557,7 @@ const SpeakerGroupItem = memo(function SpeakerGroupItem({
             className="mark-btn mark-clear"
             icon={<StopOutlined />}
             onClick={() => {
-              window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
-                detail: { groupId: group.id, type: null, timeMs: group.startTime, text: previewText }
-              }))
+              onMarkChange(group, null, previewText)
             }}
           />
         </Tooltip>
