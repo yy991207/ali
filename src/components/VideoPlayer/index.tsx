@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react'
-import { Button, Slider, Tooltip, Dropdown, Popover } from 'antd'
+import { Button, Slider, Tooltip, Dropdown, Popover, Checkbox } from 'antd'
 import { 
   PlayCircleOutlined, 
   PauseCircleOutlined,
@@ -12,7 +12,14 @@ import {
   FileTextOutlined,
   LeftOutlined,
   RightOutlined,
-  CameraOutlined
+  CameraOutlined,
+  SearchOutlined,
+  FileTextOutlined as NoteIcon,
+  StarOutlined,
+  FilterOutlined,
+  DownOutlined,
+  RobotOutlined,
+  EditOutlined
 } from '@ant-design/icons'
 import { AgendaItem, TranscriptParagraph, TranscriptSentence } from '../../types'
 import { formatTime, formatTimeFromMs } from '../../utils/time'
@@ -27,19 +34,23 @@ interface VideoPlayerProps {
   currentTime: number
   onTimeUpdate: (time: number) => void
   onSentenceChange?: (sentence: TranscriptSentence) => void
+  isCollapsed?: boolean
+  onToggleCollapse?: () => void
 }
 
 // 播放速度选项
 const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2]
 
-export default function VideoPlayer({ 
-  videoUrl, 
-  duration, 
+export default function VideoPlayer({
+  videoUrl,
+  duration,
   agendaItems,
   paragraphs,
   currentTime,
   onTimeUpdate,
-  onSentenceChange
+  onSentenceChange,
+  isCollapsed = false,
+  onToggleCollapse
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const playerRef = useRef<HTMLDivElement>(null)
@@ -54,6 +65,23 @@ export default function VideoPlayer({
   const [subtitleColor, setSubtitleColor] = useState<'dark' | 'light'>('dark')
   const [showControls, setShowControls] = useState(true)
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  
+  // 筛选状态
+  const [showMarkedOnly, setShowMarkedOnly] = useState(false)
+  const [selectedSpeakers, setSelectedSpeakers] = useState<string[]>(['all'])
+  
+  // 获取所有发言人列表
+  const speakerList = useMemo(() => {
+    const speakers = new Set<string>()
+    paragraphs?.forEach(pg => {
+      pg?.sc?.forEach(sentence => {
+        if (sentence.si !== undefined) {
+          speakers.add(`发言人 ${sentence.si + 1}`)
+        }
+      })
+    })
+    return Array.from(speakers)
+  }, [paragraphs])
 
   // 获取所有句子列表
   const allSentences = useMemo(() => {
@@ -224,6 +252,75 @@ export default function VideoPlayer({
     }
     console.log('[后一句] 没有找到同一发言人的下一个组')
   }, [speakerGroups, onTimeUpdate, onSentenceChange])
+
+  // 筛选面板
+  const renderFilterPanel = () => (
+    <div className="filter-panel">
+      {/* 固定头部区域 */}
+      <div className="filter-header">
+        <div className="filter-title">筛选</div>
+        <div className="filter-section">
+          <Checkbox
+            checked={showMarkedOnly}
+            onChange={(e) => setShowMarkedOnly(e.target.checked)}
+            className="filter-checkbox"
+          >
+            <span className="filter-label">只看标记内容</span>
+          </Checkbox>
+          <div className="filter-tags">
+            <span className="filter-tag blue">●</span>
+            <span className="filter-tag pink">●</span>
+            <span className="filter-tag yellow">●</span>
+          </div>
+        </div>
+        <div className="filter-divider" />
+        <div className="filter-section">
+          <Checkbox
+            checked={showSpeaker}
+            onChange={(e) => setShowSpeaker(e.target.checked)}
+            className="filter-checkbox"
+          >
+            <span className="filter-label">显示发言人</span>
+          </Checkbox>
+        </div>
+      </div>
+      {/* 可滚动的发言人列表 */}
+      <div className="speaker-scroll-area">
+        <div className="speaker-options">
+          <Checkbox
+            checked={selectedSpeakers.includes('all')}
+            onChange={(e) => {
+              if (e.target.checked) {
+                setSelectedSpeakers(['all'])
+              } else {
+                setSelectedSpeakers([])
+              }
+            }}
+            className="speaker-checkbox"
+          >
+            <span className="speaker-label">全选</span>
+          </Checkbox>
+          {speakerList.map((speaker, index) => (
+            <Checkbox
+              key={speaker}
+              checked={selectedSpeakers.includes(speaker) || selectedSpeakers.includes('all')}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setSelectedSpeakers(prev => [...prev.filter(s => s !== 'all'), speaker])
+                } else {
+                  setSelectedSpeakers(prev => prev.filter(s => s !== speaker))
+                }
+              }}
+              className="speaker-checkbox"
+            >
+              <span className="speaker-avatar">👤</span>
+              <span className="speaker-label">{speaker}</span>
+            </Checkbox>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 
   // 字幕设置面板
   const renderSubtitleSettings = () => (
@@ -479,12 +576,60 @@ export default function VideoPlayer({
   }, [])
 
   return (
-    <div 
-      className="video-player" 
+    <div
+      className={`video-player ${isCollapsed ? 'collapsed' : ''}`}
       ref={playerRef}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
+      {/* 顶部工具栏 */}
+      <div className="player-toolbar">
+        <div className="toolbar-right">
+          {/* 搜索图标 */}
+          <Tooltip title="搜索">
+            <Button type="text" className="toolbar-btn" icon={<SearchOutlined />} />
+          </Tooltip>
+          {/* 笔记图标 */}
+          <Tooltip title="笔记">
+            <Button type="text" className="toolbar-btn" icon={<NoteIcon />} />
+          </Tooltip>
+          {/* 收藏图标 */}
+          <Tooltip title="收藏">
+            <Button type="text" className="toolbar-btn" icon={<StarOutlined />} />
+          </Tooltip>
+          {/* 筛选图标 */}
+          <Popover
+            content={renderFilterPanel()}
+            placement="bottom"
+            trigger="hover"
+            overlayClassName="filter-popover-overlay"
+          >
+            <Button type="text" className="toolbar-btn" icon={<FilterOutlined />} />
+          </Popover>
+          {/* 字幕图标 */}
+          <Tooltip title="字幕">
+            <Button type="text" className="toolbar-btn" icon={<FileTextOutlined />} />
+          </Tooltip>
+          {/* 收起视频按钮 */}
+          <Tooltip title={isCollapsed ? "展开视频" : "收起视频"}>
+            <Button
+              type="text"
+              className="toolbar-btn collapse-btn"
+              icon={<DownOutlined rotate={isCollapsed ? 180 : 0} />}
+              onClick={onToggleCollapse}
+            />
+          </Tooltip>
+          {/* AI 图标 */}
+          <Tooltip title="AI 助手">
+            <Button type="text" className="toolbar-btn" icon={<RobotOutlined />} />
+          </Tooltip>
+          {/* 编辑图标 */}
+          <Tooltip title="编辑">
+            <Button type="text" className="toolbar-btn" icon={<EditOutlined />} />
+          </Tooltip>
+        </div>
+      </div>
+
       {/* 视频区域 */}
       <div className="video-container">
         <video

@@ -5,6 +5,212 @@
   position: relative;
 }
 
+/* 收起状态 */
+.video-player.collapsed .video-container {
+  display: none;
+}
+
+.video-player.collapsed .control-bar {
+  display: none;
+}
+
+.video-player.collapsed .player-toolbar {
+  position: relative;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* 顶部工具栏 */
+.player-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 12px 24px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-btn {
+  color: #8c8c8c !important;
+  font-size: 16px;
+  padding: 6px 10px !important;
+  height: 36px !important;
+  width: 36px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px !important;
+  transition: all 0.2s ease;
+}
+
+.toolbar-btn:hover {
+  color: #605ce5 !important;
+  background: #f0f0ff !important;
+}
+
+.collapse-btn {
+  background: #605ce5 !important;
+  color: #fff !important;
+  border-radius: 6px !important;
+}
+
+.collapse-btn:hover {
+  background: #4a3f8c !important;
+  color: #fff !important;
+}
+
+/* 筛选面板浮窗 */
+.filter-popover-overlay .ant-popover-inner {
+  background: #fff !important;
+  border-radius: 12px !important;
+  padding: 0 !important;
+  min-width: 200px;
+  max-height: 320px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+.filter-popover-overlay .ant-popover-arrow {
+  display: none !important;
+}
+
+.filter-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: 320px;
+}
+
+/* 固定头部区域 */
+.filter-header {
+  padding: 16px 16px 8px 16px;
+  flex-shrink: 0;
+  background: #fff;
+  border-radius: 12px 12px 0 0;
+}
+
+.filter-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #262626;
+  margin-bottom: 12px;
+}
+
+.filter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-checkbox {
+  display: flex;
+  align-items: center;
+}
+
+.filter-checkbox .ant-checkbox {
+  margin-right: 8px;
+}
+
+.filter-checkbox .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: #605ce5;
+  border-color: #605ce5;
+}
+
+.filter-label {
+  font-size: 13px;
+  color: #595959;
+}
+
+.filter-tags {
+  display: flex;
+  gap: 8px;
+  margin-left: 24px;
+  margin-top: 4px;
+}
+
+.filter-tag {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.filter-tag.blue {
+  color: #1890ff;
+}
+
+.filter-tag.pink {
+  color: #eb2f96;
+}
+
+.filter-tag.yellow {
+  color: #faad14;
+}
+
+.filter-divider {
+  height: 1px;
+  background: #f0f0f0;
+  margin: 12px 0;
+}
+
+/* 可滚动的发言人列表区域 */
+.speaker-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 16px 16px 16px;
+  max-height: 180px;
+}
+
+.speaker-scroll-area::-webkit-scrollbar {
+  width: 4px;
+}
+
+.speaker-scroll-area::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  border-radius: 2px;
+}
+
+.speaker-scroll-area::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 2px;
+}
+
+.speaker-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}
+
+.speaker-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.speaker-checkbox {
+  display: flex;
+  align-items: center;
+}
+
+.speaker-checkbox .ant-checkbox {
+  margin-right: 8px;
+}
+
+.speaker-checkbox .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: #605ce5;
+  border-color: #605ce5;
+}
+
+.speaker-avatar {
+  font-size: 14px;
+  margin-right: 6px;
+}
+
+.speaker-label {
+  font-size: 13px;
+  color: #595959;
+}
+
 .video-container {
   position: relative;
   width: 100%;

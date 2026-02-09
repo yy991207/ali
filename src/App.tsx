@@ -30,6 +30,7 @@ function App() {
   const [parsedTranscript, setParsedTranscript] = useState<ParsedTranscript | null>(null)
   const [isNotePanelOpen, setIsNotePanelOpen] = useState(false)
   const [notes, setNotes] = useState<NoteItem[]>([])
+  const [isVideoCollapsed, setIsVideoCollapsed] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
 
   // 加载数据
@@ -220,6 +221,8 @@ function App() {
                     // 通知转写面板滚动到对应句子
                     window.dispatchEvent(new CustomEvent('sentenceChange', { detail: sentence }))
                   }}
+                  isCollapsed={isVideoCollapsed}
+                  onToggleCollapse={() => setIsVideoCollapsed(!isVideoCollapsed)}
                 />
               </div>
             </div>
