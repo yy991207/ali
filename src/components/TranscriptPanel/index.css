@@ -9,6 +9,7 @@
   flex: 1;
   overflow: auto;
   padding: 16px;
+  position: relative;
 }
 
 .transcript-content {
@@ -19,27 +20,64 @@
 
 /* 选中文本后的操作浮窗 */
 .selection-menu {
-  position: fixed;
+  position: absolute;
   z-index: 1200;
   transform: translateX(-50%);
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
   border: 1px solid #f0f0f0;
-  padding: 6px;
+  padding: 8px 10px;
+  min-width: 160px;
 }
 
-.selection-menu-item {
-  height: 34px !important;
-  padding: 0 10px !important;
-  border-radius: 10px !important;
-  color: #262626 !important;
-  font-weight: 500;
+.selection-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
 }
 
-.selection-menu-item:hover {
-  background: #f0f0ff !important;
+.selection-menu-row + .selection-menu-row {
+  border-top: 1px solid #f2f2f2;
+}
+
+.selection-menu-row-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  color: #4a3f8c;
+  flex-shrink: 0;
+}
+
+.selection-menu-row-btn {
+  padding: 0 !important;
+  height: auto !important;
+  font-size: 14px !important;
+  font-weight: 600;
+  color: #1f2340 !important;
+}
+
+.selection-menu-row-btn:hover {
   color: #605ce5 !important;
+  background: transparent !important;
+}
+
+.selection-menu-row-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2340;
+}
+
+.selection-menu-mark-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* 发言人组样式 */
@@ -57,8 +95,8 @@
 }
 
 .speaker-group:hover {
-  background: #f0f0ff;
-  border-color: rgba(96, 92, 229, 0.35);
+  background: #fff;
+  border-color: rgba(96, 92, 229, 0.55);
 }
 
 .speaker-group.active {
@@ -66,8 +104,31 @@
   border-left: 3px solid #605ce5;
 }
 
-.speaker-group.hovered {
+.speaker-group:hover {
+  border: 2px solid rgba(96, 92, 229, 0.55);
   box-shadow: 0 2px 10px rgba(96, 92, 229, 0.10);
+}
+
+/* 点击选中态：只允许一个对象存在 */
+.speaker-group.selected {
+  background: #605ce5;
+  border: 2px solid #605ce5;
+  box-shadow: 0 6px 16px rgba(96, 92, 229, 0.30);
+}
+
+.speaker-group.selected .group-text {
+  color: #fff;
+}
+
+.speaker-group.selected .timestamp {
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.speaker-group.selected .speaker {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-color: transparent !important;
 }
 
 /* 右上角标记按钮组 */
@@ -84,7 +145,7 @@
   pointer-events: none;
 }
 
-.group-actions.visible {
+.speaker-group:hover .group-actions {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;

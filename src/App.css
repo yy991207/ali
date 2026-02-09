@@ -12,6 +12,10 @@
   padding: 16px 24px;
   border-bottom: 1px solid #e8e8e8;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .app-title {
@@ -19,6 +23,15 @@
   font-size: 18px;
   font-weight: 500;
   color: #262626;
+  flex: 1;
+  min-width: 0;
+}
+
+.app-header-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 /* 主布局 - 包含内容区和笔记面板 */

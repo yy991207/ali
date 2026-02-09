@@ -224,6 +224,8 @@ function App() {
       {/* 顶部标题栏 */}
       <header className="app-header">
         <h1 className="app-title">{transResult.data.tag.showName}</h1>
+        {/* VideoPlayer 顶部工具栏挂载点：和标题在同一个容器内 */}
+        <div id="app-header-toolbar" className="app-header-toolbar" />
       </header>
 
       <div className="main-layout">

@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { Button, Slider, Tooltip, Dropdown, Popover, Checkbox } from 'antd'
 import { 
   PlayCircleOutlined, 
@@ -462,6 +463,29 @@ export default function VideoPlayer({
     return () => window.removeEventListener('transcriptMarkChange', handleTranscriptMarkChange)
   }, [])
 
+  // 监听“从某个时间点开始播放”（来自转写文本选中菜单）
+  useEffect(() => {
+    const handlePlayFromTime = (event: Event) => {
+      const detail = (event as CustomEvent<{ timeMs: number }>).detail
+      if (!detail || !Number.isFinite(detail.timeMs) || !videoRef.current) return
+
+      const timeSec = Math.max(0, detail.timeMs / 1000)
+      videoRef.current.currentTime = timeSec
+      onTimeUpdate(timeSec)
+
+      // 这里用同步播放：用户点击“播放音频”就是强交互，直接播放更符合预期
+      videoRef.current.play().then(() => {
+        setIsPlaying(true)
+      }).catch(() => {
+        // 某些浏览器策略可能阻止自动播放，这里不抛错，保持 UI 可用
+        setIsPlaying(false)
+      })
+    }
+
+    window.addEventListener('playFromTime', handlePlayFromTime)
+    return () => window.removeEventListener('playFromTime', handlePlayFromTime)
+  }, [onTimeUpdate])
+
   return (
     <div
       className={`video-player ${isCollapsed ? 'collapsed' : ''}`}
@@ -470,52 +494,59 @@ export default function VideoPlayer({
       onMouseLeave={handleMouseLeave}
     >
       {/* 顶部工具栏 */}
-      <div className="player-toolbar">
-        <div className="toolbar-right">
-          {/* 搜索图标 */}
-          <Tooltip title="搜索">
-            <Button type="text" className="toolbar-btn" icon={<SearchOutlined />} />
-          </Tooltip>
-          {/* 笔记图标 */}
-          <Tooltip title="笔记">
-            <Button type="text" className="toolbar-btn" icon={<NoteIcon />} />
-          </Tooltip>
-          {/* 收藏图标 */}
-          <Tooltip title="收藏">
-            <Button type="text" className="toolbar-btn" icon={<StarOutlined />} />
-          </Tooltip>
-          {/* 筛选图标 */}
-          <Popover
-            content={renderFilterPanel()}
-            placement="bottom"
-            trigger="hover"
-            overlayClassName="filter-popover-overlay"
-          >
-            <Button type="text" className="toolbar-btn" icon={<FilterOutlined />} />
-          </Popover>
-          {/* 字幕图标 */}
-          <Tooltip title="字幕">
-            <Button type="text" className="toolbar-btn" icon={<FileTextOutlined />} />
-          </Tooltip>
-          {/* 收起视频按钮 */}
-          <Tooltip title={isCollapsed ? "展开视频" : "收起视频"}>
-            <Button
-              type="text"
-              className="toolbar-btn collapse-btn"
-              icon={<DownOutlined rotate={isCollapsed ? 180 : 0} />}
-              onClick={onToggleCollapse}
-            />
-          </Tooltip>
-          {/* AI 图标 */}
-          <Tooltip title="AI 助手">
-            <Button type="text" className="toolbar-btn" icon={<RobotOutlined />} />
-          </Tooltip>
-          {/* 编辑图标 */}
-          <Tooltip title="编辑">
-            <Button type="text" className="toolbar-btn" icon={<EditOutlined />} />
-          </Tooltip>
-        </div>
-      </div>
+      {(() => {
+        const toolbar = (
+          <div className="player-toolbar">
+            <div className="toolbar-right">
+              {/* 搜索图标 */}
+              <Tooltip title="搜索">
+                <Button type="text" className="toolbar-btn" icon={<SearchOutlined />} />
+              </Tooltip>
+              {/* 笔记图标 */}
+              <Tooltip title="笔记">
+                <Button type="text" className="toolbar-btn" icon={<NoteIcon />} />
+              </Tooltip>
+              {/* 收藏图标 */}
+              <Tooltip title="收藏">
+                <Button type="text" className="toolbar-btn" icon={<StarOutlined />} />
+              </Tooltip>
+              {/* 筛选图标 */}
+              <Popover
+                content={renderFilterPanel()}
+                placement="bottom"
+                trigger="hover"
+                overlayClassName="filter-popover-overlay"
+              >
+                <Button type="text" className="toolbar-btn" icon={<FilterOutlined />} />
+              </Popover>
+              {/* 字幕图标 */}
+              <Tooltip title="字幕">
+                <Button type="text" className="toolbar-btn" icon={<FileTextOutlined />} />
+              </Tooltip>
+              {/* 收起视频按钮 */}
+              <Tooltip title={isCollapsed ? "展开视频" : "收起视频"}>
+                <Button
+                  type="text"
+                  className="toolbar-btn collapse-btn"
+                  icon={<DownOutlined rotate={isCollapsed ? 180 : 0} />}
+                  onClick={onToggleCollapse}
+                />
+              </Tooltip>
+              {/* AI 图标 */}
+              <Tooltip title="AI 助手">
+                <Button type="text" className="toolbar-btn" icon={<RobotOutlined />} />
+              </Tooltip>
+              {/* 编辑图标 */}
+              <Tooltip title="编辑">
+                <Button type="text" className="toolbar-btn" icon={<EditOutlined />} />
+              </Tooltip>
+            </div>
+          </div>
+        )
+
+        const target = document.getElementById('app-header-toolbar')
+        return target ? createPortal(toolbar, target) : toolbar
+      })()}
 
       {/* 视频区域 */}
       <div className="video-container">
@@ -548,7 +579,7 @@ export default function VideoPlayer({
                     key={mark.groupId}
                     title={mark.text}
                     placement="top"
-                    overlayClassName="mark-tooltip-overlay"
+                    classNames={{ root: 'mark-tooltip-overlay' }}
                   >
                     <div
                       className={`user-mark user-mark-${mark.type}`}
@@ -827,7 +858,7 @@ export default function VideoPlayer({
                       key={mark.groupId}
                       title={mark.text}
                       placement="top"
-                      overlayClassName="mark-tooltip-overlay"
+                      classNames={{ root: 'mark-tooltip-overlay' }}
                     >
                       <div
                         className={`user-mark user-mark-${mark.type}`}

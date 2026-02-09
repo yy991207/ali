@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect, useState } from 'react'
 import { Card, Typography, Tag, Tooltip, Button } from 'antd'
-import { PushpinOutlined, QuestionCircleOutlined, CheckCircleOutlined, StopOutlined, FileTextOutlined } from '@ant-design/icons'
+import { PushpinOutlined, QuestionCircleOutlined, CheckCircleOutlined, StopOutlined, FileTextOutlined, SoundOutlined } from '@ant-design/icons'
 import { TranscriptParagraph, TranscriptSentence } from '../../types'
 import { formatTimeFromMs } from '../../utils/time'
 import './index.css'
@@ -32,16 +32,48 @@ export default function TranscriptPanel({
 }: TranscriptPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const activeGroupRef = useRef<HTMLDivElement>(null)
+  const isSelectingRef = useRef(false)
+  const selectionRangeRef = useRef<Range | null>(null)
+  const selectionMenuRafRef = useRef<number | null>(null)
   const [forceScrollSentence, setForceScrollSentence] = useState<TranscriptSentence | null>(null)
-  const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null)
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
   const [groupMarks, setGroupMarks] = useState<Record<string, MarkType>>({})
+  const [renderTimeMs, setRenderTimeMs] = useState(0)
   const [selectionMenu, setSelectionMenu] = useState<{
     visible: boolean
     x: number
     y: number
-    timeMs: number
+    startTimeMs: number
     text: string
-  }>({ visible: false, x: 0, y: 0, timeMs: 0, text: '' })
+  }>({ visible: false, x: 0, y: 0, startTimeMs: 0, text: '' })
+
+  const getScrollContainerEl = () => {
+    // antd Card 可滚动区域在 .ant-card-body
+    return (containerRef.current?.querySelector('.ant-card-body') as HTMLDivElement | null) || null
+  }
+
+  const updateSelectionMenuPosition = (range: Range) => {
+    const scrollEl = getScrollContainerEl()
+    if (!scrollEl) return
+
+    const rangeRect = range.getBoundingClientRect()
+    if (!rangeRect || rangeRect.width === 0 || rangeRect.height === 0) return
+
+    const scrollRect = scrollEl.getBoundingClientRect()
+    const centerX = rangeRect.left + rangeRect.width / 2
+    const bottomY = rangeRect.bottom
+
+    // absolute 定位：相对 scroll container（而不是视口 fixed），这样滚动时能跟着走
+    const x = centerX - scrollRect.left + scrollEl.scrollLeft
+    const y = bottomY - scrollRect.top + scrollEl.scrollTop + 8
+
+    setSelectionMenu(prev => {
+      if (!prev.visible) return prev
+      // 避免滚动时高频 setState，微小变化不更新
+      if (Math.abs(prev.x - x) < 0.5 && Math.abs(prev.y - y) < 0.5) return prev
+      return { ...prev, x, y }
+    })
+  }
 
   // 将所有句子按发言人合并成组（连续的同一个人说的话合并）
   const speakerGroups = useMemo(() => {
@@ -81,26 +113,67 @@ export default function TranscriptPanel({
     return groups
   }, [paragraphs])
 
-  // 当前时间对应的句子
-  const currentSentence = useMemo(() => {
-    const currentMs = currentTime * 1000
+  // 把所有句子拍平成列表，便于用二分查找提升性能
+  const allSentences = useMemo(() => {
+    const sentences: TranscriptSentence[] = []
     for (const paragraph of paragraphs) {
-      for (const sentence of paragraph.sc) {
-        if (currentMs >= sentence.bt && currentMs <= sentence.et) {
-          return sentence
-        }
+      if (!paragraph?.sc) continue
+      sentences.push(...paragraph.sc)
+    }
+    return sentences.sort((a, b) => a.bt - b.bt)
+  }, [paragraphs])
+
+  // sentenceId -> group 映射，避免每次都在 groups 里扫
+  const sentenceIdToGroupId = useMemo(() => {
+    const map = new Map<number, string>()
+    for (const group of speakerGroups) {
+      for (const s of group.sentences) {
+        map.set(s.id, group.id)
       }
     }
-    return null
-  }, [paragraphs, currentTime])
+    return map
+  }, [speakerGroups])
+
+  // 降频渲染：视频 currentTime 变化很频繁，直接驱动整列表重渲染会导致选中文字时卡顿
+  useEffect(() => {
+    const nextMs = currentTime * 1000
+    if (selectionMenu.visible || isSelectingRef.current) return
+
+    // 只有变化足够大才触发 state 更新，避免每帧重渲染
+    if (Math.abs(nextMs - renderTimeMs) < 180) return
+    setRenderTimeMs(nextMs)
+  }, [currentTime, renderTimeMs, selectionMenu.visible])
+
+  const currentSentence = useMemo(() => {
+    const currentMs = renderTimeMs
+    if (allSentences.length === 0) return null
+
+    // 二分查找：找最后一个 bt <= currentMs 的句子
+    let left = 0
+    let right = allSentences.length - 1
+    let candidate = -1
+    while (left <= right) {
+      const mid = (left + right) >> 1
+      if (allSentences[mid].bt <= currentMs) {
+        candidate = mid
+        left = mid + 1
+      } else {
+        right = mid - 1
+      }
+    }
+    if (candidate === -1) return null
+
+    const sentence = allSentences[candidate]
+    return currentMs <= sentence.et ? sentence : null
+  }, [allSentences, renderTimeMs])
 
   // 当前时间对应的组
   const currentGroup = useMemo(() => {
     if (!currentSentence) return null
-    return speakerGroups.find(group =>
-      group.sentences.some(s => s.id === currentSentence.id)
-    ) || null
-  }, [currentSentence, speakerGroups])
+    const groupId = sentenceIdToGroupId.get(currentSentence.id)
+    if (!groupId) return null
+    return speakerGroups.find(g => g.id === groupId) || null
+  }, [currentSentence, sentenceIdToGroupId, speakerGroups])
 
   // 强制滚动对应的组
   const forceScrollGroup = useMemo(() => {
@@ -138,6 +211,8 @@ export default function TranscriptPanel({
 
   // 处理组点击
   const handleGroupClick = (group: SpeakerGroup) => {
+    // 点击选中：同一时间只允许一个段落处于“选中态”
+    setSelectedGroupId(group.id)
     onSentenceClick?.(group.startTime)
   }
 
@@ -148,6 +223,7 @@ export default function TranscriptPanel({
     const selectedText = selection?.toString().trim() || ''
     if (!selection || !selectedText) {
       setSelectionMenu(prev => ({ ...prev, visible: false }))
+      selectionRangeRef.current = null
       return
     }
 
@@ -164,15 +240,80 @@ export default function TranscriptPanel({
     const rect = range.getBoundingClientRect()
     if (!rect || rect.width === 0 || rect.height === 0) return
 
-    // 使用 fixed 定位：跟随视口，不受滚动容器影响
+    // 计算选中文段的开始时间：尽量贴近选区起点，而不是整段开始时间
+    const computeSelectionStartTimeMs = () => {
+      try {
+        const startRange = document.createRange()
+        startRange.selectNodeContents(containerEl)
+        startRange.setEnd(range.startContainer, range.startOffset)
+        const prefixTextLength = startRange.toString().length
+
+        let cursor = 0
+        for (const sentence of group.sentences) {
+          const sentenceText = sentence.tc || ''
+          const nextCursor = cursor + sentenceText.length
+          if (prefixTextLength <= nextCursor) {
+            const offsetInSentence = Math.max(0, prefixTextLength - cursor)
+            const ratio = sentenceText.length > 0 ? offsetInSentence / sentenceText.length : 0
+            return sentence.bt + ratio * (sentence.et - sentence.bt)
+          }
+          cursor = nextCursor
+        }
+        return group.startTime
+      } catch {
+        return group.startTime
+      }
+    }
+
+    const selectionStartTimeMs = computeSelectionStartTimeMs()
+
+    // 记录 range：用于滚动时跟随更新位置
+    selectionRangeRef.current = range.cloneRange()
+
+    // 使用 absolute 定位：相对滚动容器，这样滚动时能跟着走
+    const scrollEl = getScrollContainerEl()
+    const scrollRect = scrollEl?.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const bottomY = rect.bottom
+    const x = scrollEl && scrollRect ? (centerX - scrollRect.left + scrollEl.scrollLeft) : centerX
+    const y = scrollEl && scrollRect ? (bottomY - scrollRect.top + scrollEl.scrollTop + 8) : (bottomY + 10)
+
     setSelectionMenu({
       visible: true,
-      x: rect.left + rect.width / 2,
-      y: rect.bottom + 10,
-      timeMs: group.startTime,
+      x,
+      y,
+      startTimeMs: selectionStartTimeMs,
       text: selectedText
     })
   }
+
+  // 浮窗跟随滚动：选区不变时，滚动也要同步更新位置
+  useEffect(() => {
+    const scrollEl = getScrollContainerEl()
+    if (!scrollEl) return
+
+    const handleScroll = () => {
+      if (!selectionMenu.visible) return
+      const range = selectionRangeRef.current
+      if (!range) return
+      if (selectionMenuRafRef.current !== null) return
+      selectionMenuRafRef.current = window.requestAnimationFrame(() => {
+        selectionMenuRafRef.current = null
+        updateSelectionMenuPosition(range)
+      })
+    }
+
+    scrollEl.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('resize', handleScroll, { passive: true })
+    return () => {
+      if (selectionMenuRafRef.current !== null) {
+        window.cancelAnimationFrame(selectionMenuRafRef.current)
+        selectionMenuRafRef.current = null
+      }
+      scrollEl.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('resize', handleScroll)
+    }
+  }, [selectionMenu.visible])
 
   return (
     <Card
@@ -187,20 +328,111 @@ export default function TranscriptPanel({
           style={{ left: selectionMenu.x, top: selectionMenu.y }}
           onMouseDown={(e) => e.preventDefault()}
         >
-          <Button
-            type="text"
-            className="selection-menu-item"
-            icon={<FileTextOutlined />}
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent('oneClickSummary', {
-                detail: { timeMs: selectionMenu.timeMs, text: selectionMenu.text }
-              }))
-              window.getSelection()?.removeAllRanges()
-              setSelectionMenu(prev => ({ ...prev, visible: false }))
-            }}
-          >
-            一键摘要
-          </Button>
+          <div className="selection-menu-row">
+            <span className="selection-menu-row-icon">
+              <FileTextOutlined />
+            </span>
+            <Button
+              type="text"
+              className="selection-menu-row-btn"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('oneClickSummary', {
+                  detail: { timeMs: selectionMenu.startTimeMs, text: selectionMenu.text }
+                }))
+                window.getSelection()?.removeAllRanges()
+                selectionRangeRef.current = null
+                setSelectionMenu(prev => ({ ...prev, visible: false }))
+              }}
+            >
+              一键摘取
+            </Button>
+          </div>
+
+          <div className="selection-menu-row">
+            <span className="selection-menu-row-icon">
+              <PushpinOutlined />
+            </span>
+            <span className="selection-menu-row-label">标记</span>
+            <div className="selection-menu-mark-actions">
+              {(() => {
+                const markId = `sel-${Math.round(selectionMenu.startTimeMs)}`
+                const preview = selectionMenu.text.length > 18 ? `${selectionMenu.text.slice(0, 18)}...` : selectionMenu.text
+
+                  const dispatchMark = (type: 'important' | 'question' | 'todo' | null) => {
+                    window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
+                      detail: { groupId: markId, type, timeMs: selectionMenu.startTimeMs, text: preview }
+                    }))
+                    if (type) {
+                      // 这里保持和之前一致：标记后把选区清掉，避免一直高亮影响阅读
+                      window.getSelection()?.removeAllRanges()
+                      selectionRangeRef.current = null
+                      setSelectionMenu(prev => ({ ...prev, visible: false }))
+                    }
+                  }
+
+                return (
+                  <>
+                    <Tooltip title="标记为重点" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
+                      <Button
+                        type="text"
+                        size="small"
+                        className="mark-btn mark-important"
+                        icon={<PushpinOutlined />}
+                        onClick={() => dispatchMark('important')}
+                      />
+                    </Tooltip>
+                    <Tooltip title="标记为问题" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
+                      <Button
+                        type="text"
+                        size="small"
+                        className="mark-btn mark-question"
+                        icon={<QuestionCircleOutlined />}
+                        onClick={() => dispatchMark('question')}
+                      />
+                    </Tooltip>
+                    <Tooltip title="标记为待办" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
+                      <Button
+                        type="text"
+                        size="small"
+                        className="mark-btn mark-todo"
+                        icon={<CheckCircleOutlined />}
+                        onClick={() => dispatchMark('todo')}
+                      />
+                    </Tooltip>
+                    <Tooltip title="取消标记" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
+                      <Button
+                        type="text"
+                        size="small"
+                        className="mark-btn mark-clear"
+                        icon={<StopOutlined />}
+                        onClick={() => dispatchMark(null)}
+                      />
+                    </Tooltip>
+                  </>
+                )
+              })()}
+            </div>
+          </div>
+
+          <div className="selection-menu-row">
+            <span className="selection-menu-row-icon">
+              <SoundOutlined />
+            </span>
+            <Button
+              type="text"
+              className="selection-menu-row-btn"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('playFromTime', {
+                  detail: { timeMs: selectionMenu.startTimeMs }
+                }))
+                window.getSelection()?.removeAllRanges()
+                selectionRangeRef.current = null
+                setSelectionMenu(prev => ({ ...prev, visible: false }))
+              }}
+            >
+              播放音频
+            </Button>
+          </div>
         </div>
       )}
 
@@ -209,7 +441,7 @@ export default function TranscriptPanel({
           const isActive = currentGroup?.id === group.id
           const isForceActive = forceScrollGroup?.id === group.id
           const shouldHighlight = isActive || isForceActive
-          const isHovered = hoveredGroupId === group.id
+          const isSelected = selectedGroupId === group.id
           const markType = groupMarks[group.id] ?? null
           const markedClassName = markType ? `marked-${markType}` : ''
           const previewText = group.text.length > 18 ? `${group.text.slice(0, 18)}...` : group.text
@@ -218,18 +450,12 @@ export default function TranscriptPanel({
             <div
               key={group.id}
               ref={shouldHighlight ? activeGroupRef : null}
-              className={`speaker-group ${shouldHighlight ? 'active' : ''} ${isHovered ? 'hovered' : ''}`}
+              className={`speaker-group ${shouldHighlight ? 'active' : ''} ${isSelected ? 'selected' : ''}`}
               onClick={() => handleGroupClick(group)}
-              onMouseEnter={() => setHoveredGroupId(group.id)}
-              onMouseLeave={() => setHoveredGroupId(prev => (prev === group.id ? null : prev))}
             >
               {/* 右上角标记按钮：仅 hover 时显示 */}
-              <div className={`group-actions ${isHovered ? 'visible' : ''}`} onClick={(e) => e.stopPropagation()}>
-                <Tooltip
-                  title="标记为重点"
-                  placement="top"
-                  overlayClassName="mark-tooltip-overlay"
-                >
+              <div className="group-actions" onClick={(e) => e.stopPropagation()}>
+                <Tooltip title="标记为重点" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
                   <Button
                     type="text"
                     size="small"
@@ -243,11 +469,7 @@ export default function TranscriptPanel({
                     }}
                   />
                 </Tooltip>
-                <Tooltip
-                  title="标记为问题"
-                  placement="top"
-                  overlayClassName="mark-tooltip-overlay"
-                >
+                <Tooltip title="标记为问题" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
                   <Button
                     type="text"
                     size="small"
@@ -261,11 +483,7 @@ export default function TranscriptPanel({
                     }}
                   />
                 </Tooltip>
-                <Tooltip
-                  title="标记为待办"
-                  placement="top"
-                  overlayClassName="mark-tooltip-overlay"
-                >
+                <Tooltip title="标记为待办" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
                   <Button
                     type="text"
                     size="small"
@@ -279,11 +497,7 @@ export default function TranscriptPanel({
                     }}
                   />
                 </Tooltip>
-                <Tooltip
-                  title="取消标记"
-                  placement="top"
-                  overlayClassName="mark-tooltip-overlay"
-                >
+                <Tooltip title="取消标记" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
                   <Button
                     type="text"
                     size="small"
@@ -314,9 +528,14 @@ export default function TranscriptPanel({
                 className={`group-text ${markedClassName}`}
                 onMouseUp={(e) => {
                   const el = e.currentTarget as unknown as HTMLElement
+                  isSelectingRef.current = false
                   handleTextSelection(group, el)
                 }}
-                onMouseDown={() => setSelectionMenu(prev => ({ ...prev, visible: false }))}
+                onMouseDown={() => {
+                  isSelectingRef.current = true
+                  setSelectionMenu(prev => ({ ...prev, visible: false }))
+                  selectionRangeRef.current = null
+                }}
               >
                 {group.text}
               </Text>
