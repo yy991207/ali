@@ -569,17 +569,11 @@ export default function VideoPlayer({
             />
           </div>
           
-          {/* 时间显示 */}
-          <div className="time-display">
-            <span className="current-time">{formatTime(currentTime)}</span>
-            <span className="time-separator"> / </span>
-            <span className="total-time">{formatTime(duration)}</span>
-          </div>
         </div>
 
         {/* 控制按钮区域 */}
         <div className="controls-section">
-          {/* 播放控制 */}
+          {/* 左侧：播放控制 + 时间显示 */}
           <div className="playback-controls">
             <Tooltip title="上一章">
               <Button
@@ -607,6 +601,13 @@ export default function VideoPlayer({
                 onClick={jumpToNextSegment}
               />
             </Tooltip>
+
+            {/* 时间显示 */}
+            <div className="time-display">
+              <span className="current-time">{formatTime(currentTime)}</span>
+              <span className="time-separator"> / </span>
+              <span className="total-time">{formatTime(duration)}</span>
+            </div>
           </div>
 
           {/* 功能控制 */}
