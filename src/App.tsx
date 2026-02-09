@@ -5,13 +5,14 @@ import TranscriptPanel from './components/TranscriptPanel'
 import SmartOverview from './components/SmartOverview'
 import NotePanel from './components/NotePanel'
 import { LabInfoResponse, TransResultResponse, ParsedTranscript, AgendaItem, KeywordItem, RoleSummaryItem } from './types'
+import { formatTimeFromMs } from './utils/time'
 import './App.css'
 
 // 笔记项接口
 interface NoteItem {
   id: string
   timestamp: number
-  imageUrl: string
+  imageUrl?: string
   content: string
   createdAt: Date
 }
@@ -176,6 +177,29 @@ function App() {
       window.removeEventListener('captureNote', handleCaptureNote)
     }
   }, [handleAddNote])
+
+  // 监听“一键摘要”事件（从转写文本选中片段触发）
+  useEffect(() => {
+    const handleOneClickSummary = (event: Event) => {
+      const detail = (event as CustomEvent<{ timeMs: number; text: string }>).detail
+      if (!detail?.text || !Number.isFinite(detail.timeMs)) return
+
+      // 打开右侧编辑面板
+      setIsNotePanelOpen(true)
+
+      const newNote: NoteItem = {
+        id: Date.now().toString(),
+        timestamp: detail.timeMs / 1000,
+        imageUrl: undefined,
+        content: `[${formatTimeFromMs(detail.timeMs)}] ${detail.text}`,
+        createdAt: new Date()
+      }
+      setNotes(prev => [...prev, newNote])
+    }
+
+    window.addEventListener('oneClickSummary', handleOneClickSummary)
+    return () => window.removeEventListener('oneClickSummary', handleOneClickSummary)
+  }, [])
 
   if (loading) {
     return (

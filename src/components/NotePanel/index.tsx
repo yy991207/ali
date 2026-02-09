@@ -15,7 +15,7 @@ const { Option } = Select
 interface NoteItem {
   id: string
   timestamp: number
-  imageUrl: string
+  imageUrl?: string
   content: string
   createdAt: Date
 }
@@ -129,13 +129,15 @@ export default function NotePanel({
               </div>
               
               {/* 截图 */}
-              <div className="note-image-container">
-                <img 
-                  src={note.imageUrl} 
-                  alt={`截图 ${formatTime(note.timestamp)}`}
-                  className="note-image"
-                />
-              </div>
+              {note.imageUrl && (
+                <div className="note-image-container">
+                  <img 
+                    src={note.imageUrl} 
+                    alt={`截图 ${formatTime(note.timestamp)}`}
+                    className="note-image"
+                  />
+                </div>
+              )}
               
               {/* 文字编辑区 */}
               <TextArea

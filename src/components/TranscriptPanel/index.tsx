@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect, useState } from 'react'
 import { Card, Typography, Tag, Tooltip, Button } from 'antd'
-import { PushpinOutlined, QuestionCircleOutlined, CheckCircleOutlined, StopOutlined } from '@ant-design/icons'
+import { PushpinOutlined, QuestionCircleOutlined, CheckCircleOutlined, StopOutlined, FileTextOutlined } from '@ant-design/icons'
 import { TranscriptParagraph, TranscriptSentence } from '../../types'
 import { formatTimeFromMs } from '../../utils/time'
 import './index.css'
@@ -35,6 +35,13 @@ export default function TranscriptPanel({
   const [forceScrollSentence, setForceScrollSentence] = useState<TranscriptSentence | null>(null)
   const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null)
   const [groupMarks, setGroupMarks] = useState<Record<string, MarkType>>({})
+  const [selectionMenu, setSelectionMenu] = useState<{
+    visible: boolean
+    x: number
+    y: number
+    timeMs: number
+    text: string
+  }>({ visible: false, x: 0, y: 0, timeMs: 0, text: '' })
 
   // 将所有句子按发言人合并成组（连续的同一个人说的话合并）
   const speakerGroups = useMemo(() => {
@@ -134,12 +141,69 @@ export default function TranscriptPanel({
     onSentenceClick?.(group.startTime)
   }
 
+  // 处理文本选中后的浮窗菜单
+  const handleTextSelection = (group: SpeakerGroup, containerEl: HTMLElement | null) => {
+    if (!containerEl) return
+    const selection = window.getSelection()
+    const selectedText = selection?.toString().trim() || ''
+    if (!selection || !selectedText) {
+      setSelectionMenu(prev => ({ ...prev, visible: false }))
+      return
+    }
+
+    // 确保选区在当前段落内
+    const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null
+    if (!range) return
+    const commonAncestor = range.commonAncestorContainer
+    const anchorEl = commonAncestor instanceof Element ? commonAncestor : commonAncestor.parentElement
+    if (!anchorEl || !containerEl.contains(anchorEl)) {
+      setSelectionMenu(prev => ({ ...prev, visible: false }))
+      return
+    }
+
+    const rect = range.getBoundingClientRect()
+    if (!rect || rect.width === 0 || rect.height === 0) return
+
+    // 使用 fixed 定位：跟随视口，不受滚动容器影响
+    setSelectionMenu({
+      visible: true,
+      x: rect.left + rect.width / 2,
+      y: rect.bottom + 10,
+      timeMs: group.startTime,
+      text: selectedText
+    })
+  }
+
   return (
     <Card
       className="transcript-panel"
       title="转写文本"
       ref={containerRef}
     >
+      {/* 选中文本后的操作浮窗 */}
+      {selectionMenu.visible && (
+        <div
+          className="selection-menu"
+          style={{ left: selectionMenu.x, top: selectionMenu.y }}
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          <Button
+            type="text"
+            className="selection-menu-item"
+            icon={<FileTextOutlined />}
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('oneClickSummary', {
+                detail: { timeMs: selectionMenu.timeMs, text: selectionMenu.text }
+              }))
+              window.getSelection()?.removeAllRanges()
+              setSelectionMenu(prev => ({ ...prev, visible: false }))
+            }}
+          >
+            一键摘要
+          </Button>
+        </div>
+      )}
+
       <div className="transcript-content">
         {speakerGroups.map((group) => {
           const isActive = currentGroup?.id === group.id
@@ -246,7 +310,16 @@ export default function TranscriptPanel({
               </div>
 
               {/* 文本内容 */}
-              <Text className={`group-text ${markedClassName}`}>{group.text}</Text>
+              <Text
+                className={`group-text ${markedClassName}`}
+                onMouseUp={(e) => {
+                  const el = e.currentTarget as unknown as HTMLElement
+                  handleTextSelection(group, el)
+                }}
+                onMouseDown={() => setSelectionMenu(prev => ({ ...prev, visible: false }))}
+              >
+                {group.text}
+              </Text>
             </div>
           )
         })}

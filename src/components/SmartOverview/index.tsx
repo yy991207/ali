@@ -27,6 +27,7 @@ export default function SmartOverview({
   const [activeTab, setActiveTab] = useState('agenda')
   const [summaryExpanded, setSummaryExpanded] = useState(false)
   const [keywordsExpanded, setKeywordsExpanded] = useState(false)
+  const [agendaExpanded, setAgendaExpanded] = useState(false)
   const [selectedAgendaId, setSelectedAgendaId] = useState<number | null>(null)
   const agendaListRef = useRef<HTMLDivElement>(null)
 
@@ -66,13 +67,18 @@ export default function SmartOverview({
     return null
   }, [agendaItems, currentTime])
 
+  // 章节速览默认展示条数（收起态）
+  const DEFAULT_AGENDA_COUNT = 2
+  const displayedAgendaItems = agendaExpanded ? agendaItems : agendaItems.slice(0, DEFAULT_AGENDA_COUNT)
+  const hiddenAgendaCount = Math.max(0, agendaItems.length - displayedAgendaItems.length)
+
   // 渲染章节速览列表
   const renderAgendaList = () => (
     <div className="agenda-list" ref={agendaListRef}>
-      {agendaItems.map((item, index) => {
+      {displayedAgendaItems.map((item, index) => {
         const isPlaying = currentPlayingId === item.id
         const isSelected = selectedAgendaId === item.id
-        const isLast = index === agendaItems.length - 1
+        const isLast = index === displayedAgendaItems.length - 1
 
         return (
           <div
@@ -122,6 +128,20 @@ export default function SmartOverview({
           </div>
         )
       })}
+
+      {/* 收起/展开按钮 */}
+      {agendaItems.length > DEFAULT_AGENDA_COUNT && (
+        <Button
+          type="link"
+          className="agenda-toggle-btn"
+          onClick={() => {
+            // 这里是纯前端 UI 展开/收起，不涉及异步，保持同步交互更顺滑
+            setAgendaExpanded(prev => !prev)
+          }}
+        >
+          {agendaExpanded ? '收起' : `展开全部章节（${hiddenAgendaCount}）`}
+        </Button>
+      )}
     </div>
   )
 
