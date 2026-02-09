@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect, useState } from 'react'
+import { useMemo, useRef, useEffect, useState, useCallback, memo } from 'react'
 import { Card, Typography, Tag, Tooltip, Button } from 'antd'
 import { PushpinOutlined, QuestionCircleOutlined, CheckCircleOutlined, StopOutlined, FileTextOutlined, SoundOutlined } from '@ant-design/icons'
 import { TranscriptParagraph, TranscriptSentence } from '../../types'
@@ -47,12 +47,12 @@ export default function TranscriptPanel({
     text: string
   }>({ visible: false, x: 0, y: 0, startTimeMs: 0, text: '' })
 
-  const getScrollContainerEl = () => {
+  const getScrollContainerEl = useCallback(() => {
     // antd Card 可滚动区域在 .ant-card-body
     return (containerRef.current?.querySelector('.ant-card-body') as HTMLDivElement | null) || null
-  }
+  }, [])
 
-  const updateSelectionMenuPosition = (range: Range) => {
+  const updateSelectionMenuPosition = useCallback((range: Range) => {
     const scrollEl = getScrollContainerEl()
     if (!scrollEl) return
 
@@ -73,7 +73,7 @@ export default function TranscriptPanel({
       if (Math.abs(prev.x - x) < 0.5 && Math.abs(prev.y - y) < 0.5) return prev
       return { ...prev, x, y }
     })
-  }
+  }, [getScrollContainerEl])
 
   // 将所有句子按发言人合并成组（连续的同一个人说的话合并）
   const speakerGroups = useMemo(() => {
@@ -217,7 +217,7 @@ export default function TranscriptPanel({
   }
 
   // 处理文本选中后的浮窗菜单
-  const handleTextSelection = (group: SpeakerGroup, containerEl: HTMLElement | null) => {
+  const handleTextSelection = useCallback((group: SpeakerGroup, containerEl: HTMLElement | null) => {
     if (!containerEl) return
     const selection = window.getSelection()
     const selectedText = selection?.toString().trim() || ''
@@ -285,7 +285,7 @@ export default function TranscriptPanel({
       startTimeMs: selectionStartTimeMs,
       text: selectedText
     })
-  }
+  }, [getScrollContainerEl])
 
   // 浮窗跟随滚动：选区不变时，滚动也要同步更新位置
   useEffect(() => {
@@ -314,6 +314,22 @@ export default function TranscriptPanel({
       window.removeEventListener('resize', handleScroll)
     }
   }, [selectionMenu.visible])
+
+  const handleGroupClickStable = useCallback((group: SpeakerGroup) => {
+    setSelectedGroupId(group.id)
+    onSentenceClick?.(group.startTime)
+  }, [onSentenceClick])
+
+  const handleTextMouseUp = useCallback((group: SpeakerGroup, el: HTMLElement) => {
+    isSelectingRef.current = false
+    handleTextSelection(group, el)
+  }, [handleTextSelection])
+
+  const handleTextMouseDown = useCallback(() => {
+    isSelectingRef.current = true
+    setSelectionMenu(prev => ({ ...prev, visible: false }))
+    selectionRangeRef.current = null
+  }, [])
 
   return (
     <Card
@@ -447,102 +463,136 @@ export default function TranscriptPanel({
           const previewText = group.text.length > 18 ? `${group.text.slice(0, 18)}...` : group.text
 
           return (
-            <div
+            <SpeakerGroupItem
               key={group.id}
-              ref={shouldHighlight ? activeGroupRef : null}
-              className={`speaker-group ${shouldHighlight ? 'active' : ''} ${isSelected ? 'selected' : ''}`}
-              onClick={() => handleGroupClick(group)}
-            >
-              {/* 右上角标记按钮：仅 hover 时显示 */}
-              <div className="group-actions" onClick={(e) => e.stopPropagation()}>
-                <Tooltip title="标记为重点" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
-                  <Button
-                    type="text"
-                    size="small"
-                    className={`mark-btn mark-important ${markType === 'important' ? 'active' : ''}`}
-                    icon={<PushpinOutlined />}
-                    onClick={() => {
-                      setGroupMarks(prev => ({ ...prev, [group.id]: 'important' }))
-                      window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
-                        detail: { groupId: group.id, type: 'important', timeMs: group.startTime, text: previewText }
-                      }))
-                    }}
-                  />
-                </Tooltip>
-                <Tooltip title="标记为问题" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
-                  <Button
-                    type="text"
-                    size="small"
-                    className={`mark-btn mark-question ${markType === 'question' ? 'active' : ''}`}
-                    icon={<QuestionCircleOutlined />}
-                    onClick={() => {
-                      setGroupMarks(prev => ({ ...prev, [group.id]: 'question' }))
-                      window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
-                        detail: { groupId: group.id, type: 'question', timeMs: group.startTime, text: previewText }
-                      }))
-                    }}
-                  />
-                </Tooltip>
-                <Tooltip title="标记为待办" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
-                  <Button
-                    type="text"
-                    size="small"
-                    className={`mark-btn mark-todo ${markType === 'todo' ? 'active' : ''}`}
-                    icon={<CheckCircleOutlined />}
-                    onClick={() => {
-                      setGroupMarks(prev => ({ ...prev, [group.id]: 'todo' }))
-                      window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
-                        detail: { groupId: group.id, type: 'todo', timeMs: group.startTime, text: previewText }
-                      }))
-                    }}
-                  />
-                </Tooltip>
-                <Tooltip title="取消标记" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
-                  <Button
-                    type="text"
-                    size="small"
-                    className="mark-btn mark-clear"
-                    icon={<StopOutlined />}
-                    onClick={() => {
-                      setGroupMarks(prev => ({ ...prev, [group.id]: null }))
-                      window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
-                        detail: { groupId: group.id, type: null, timeMs: group.startTime, text: previewText }
-                      }))
-                    }}
-                  />
-                </Tooltip>
-              </div>
-
-              {/* 头部信息：时间戳和发言人 */}
-              <div className="group-header">
-                <Tag className="timestamp">
-                  {formatTimeFromMs(group.startTime)}
-                </Tag>
-                <Tag className="speaker" color="blue">
-                  发言人 {group.speakerId}
-                </Tag>
-              </div>
-
-              {/* 文本内容 */}
-              <Text
-                className={`group-text ${markedClassName}`}
-                onMouseUp={(e) => {
-                  const el = e.currentTarget as unknown as HTMLElement
-                  isSelectingRef.current = false
-                  handleTextSelection(group, el)
-                }}
-                onMouseDown={() => {
-                  isSelectingRef.current = true
-                  setSelectionMenu(prev => ({ ...prev, visible: false }))
-                  selectionRangeRef.current = null
-                }}
-              >
-                {group.text}
-              </Text>
-            </div>
+              group={group}
+              shouldHighlight={shouldHighlight}
+              isSelected={isSelected}
+              markType={markType}
+              markedClassName={markedClassName}
+              previewText={previewText}
+              activeGroupRef={activeGroupRef}
+              onSelect={handleGroupClickStable}
+              onTextMouseUp={handleTextMouseUp}
+              onTextMouseDown={handleTextMouseDown}
+            />
           )
         })}
       </div>
     </Card>
   )
 }
+
+const SpeakerGroupItem = memo(function SpeakerGroupItem({
+  group,
+  shouldHighlight,
+  isSelected,
+  markType,
+  markedClassName,
+  previewText,
+  activeGroupRef,
+  onSelect,
+  onTextMouseUp,
+  onTextMouseDown
+}: {
+  group: SpeakerGroup
+  shouldHighlight: boolean
+  isSelected: boolean
+  markType: MarkType
+  markedClassName: string
+  previewText: string
+  activeGroupRef: React.RefObject<HTMLDivElement>
+  onSelect: (group: SpeakerGroup) => void
+  onTextMouseUp: (group: SpeakerGroup, el: HTMLElement) => void
+  onTextMouseDown: () => void
+}) {
+  return (
+    <div
+      ref={shouldHighlight ? activeGroupRef : null}
+      className={`speaker-group ${shouldHighlight ? 'active' : ''} ${isSelected ? 'selected' : ''}`}
+      onClick={() => onSelect(group)}
+    >
+      {/* 右上角标记按钮：仅 hover 时显示 */}
+      <div className="group-actions" onClick={(e) => e.stopPropagation()}>
+        <Tooltip title="标记为重点" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
+          <Button
+            type="text"
+            size="small"
+            className={`mark-btn mark-important ${markType === 'important' ? 'active' : ''}`}
+            icon={<PushpinOutlined />}
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
+                detail: { groupId: group.id, type: 'important', timeMs: group.startTime, text: previewText }
+              }))
+            }}
+          />
+        </Tooltip>
+        <Tooltip title="标记为问题" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
+          <Button
+            type="text"
+            size="small"
+            className={`mark-btn mark-question ${markType === 'question' ? 'active' : ''}`}
+            icon={<QuestionCircleOutlined />}
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
+                detail: { groupId: group.id, type: 'question', timeMs: group.startTime, text: previewText }
+              }))
+            }}
+          />
+        </Tooltip>
+        <Tooltip title="标记为待办" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
+          <Button
+            type="text"
+            size="small"
+            className={`mark-btn mark-todo ${markType === 'todo' ? 'active' : ''}`}
+            icon={<CheckCircleOutlined />}
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
+                detail: { groupId: group.id, type: 'todo', timeMs: group.startTime, text: previewText }
+              }))
+            }}
+          />
+        </Tooltip>
+        <Tooltip title="取消标记" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
+          <Button
+            type="text"
+            size="small"
+            className="mark-btn mark-clear"
+            icon={<StopOutlined />}
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
+                detail: { groupId: group.id, type: null, timeMs: group.startTime, text: previewText }
+              }))
+            }}
+          />
+        </Tooltip>
+      </div>
+
+      {/* 头部信息：时间戳和发言人 */}
+      <div className="group-header">
+        <Tag className="timestamp">
+          {formatTimeFromMs(group.startTime)}
+        </Tag>
+        <Tag className="speaker" color="blue">
+          发言人 {group.speakerId}
+        </Tag>
+      </div>
+
+      {/* 文本内容 */}
+      <Text
+        className={`group-text ${markedClassName}`}
+        onMouseUp={(e) => onTextMouseUp(group, e.currentTarget as unknown as HTMLElement)}
+        onMouseDown={onTextMouseDown}
+      >
+        {group.text}
+      </Text>
+    </div>
+  )
+}, (prev, next) => {
+  return prev.group === next.group &&
+    prev.shouldHighlight === next.shouldHighlight &&
+    prev.isSelected === next.isSelected &&
+    prev.markType === next.markType &&
+    prev.markedClassName === next.markedClassName &&
+    prev.previewText === next.previewText
+})
