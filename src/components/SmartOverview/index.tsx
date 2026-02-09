@@ -174,25 +174,15 @@ export default function SmartOverview({
           }
         >
           <div className="summary-wrapper">
-            <Paragraph className={`full-summary ${summaryExpanded ? 'expanded' : 'collapsed'}`}>
+            <div className={`full-summary ${summaryExpanded ? 'expanded' : 'collapsed'}`}>
               {fullSummary}
-            </Paragraph>
-            {!summaryExpanded && fullSummary.length > 60 && (
               <span 
                 className="summary-expand-inline"
-                onClick={() => setSummaryExpanded(true)}
+                onClick={() => setSummaryExpanded(!summaryExpanded)}
               >
-                ...展开全部
+                {summaryExpanded ? ' 收起' : '...展开全部'}
               </span>
-            )}
-            {summaryExpanded && (
-              <span 
-                className="summary-expand-inline"
-                onClick={() => setSummaryExpanded(false)}
-              >
-                收起
-              </span>
-            )}
+            </div>
           </div>
         </Card>
       )}

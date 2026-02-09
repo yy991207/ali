@@ -115,29 +115,25 @@
 }
 
 .summary-wrapper {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
+  position: relative;
 }
 
 .full-summary {
   font-size: 14px;
   line-height: 1.6;
   color: #595959;
-  margin-bottom: 0 !important;
   text-align: justify;
-  flex: 1;
+  overflow: hidden;
+  transition: max-height 0.3s ease-in-out;
+  position: relative;
 }
 
 .full-summary.collapsed {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  max-height: calc(1.6em * 3);
 }
 
 .full-summary.expanded {
-  display: block;
+  max-height: 500px;
 }
 
 .summary-expand-inline {
@@ -145,8 +141,17 @@
   cursor: pointer;
   font-size: 14px;
   white-space: nowrap;
-  line-height: 1.6;
-  margin-left: 4px;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(to right, transparent, #fff 30%);
+  padding-left: 30px;
+}
+
+.full-summary.expanded .summary-expand-inline {
+  position: static;
+  background: none;
+  padding-left: 0;
 }
 
 .summary-expand-inline:hover {
