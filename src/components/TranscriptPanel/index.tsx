@@ -111,16 +111,11 @@ const SpeakerGroupItem = memo(function SpeakerGroupItem({
       }
 
       // 添加高亮标记的文本
+      const markClassName = mark.type ? `marked-${mark.type}` : ''
       parts.push(
         <span
           key={`mark-${mark.id}`}
-          className="text-mark-highlight"
-          style={{
-            backgroundColor: `${mark.color}40`, // 40% 透明度
-            borderBottom: `2px solid ${mark.color}`,
-            padding: '0 2px',
-            borderRadius: '2px'
-          }}
+          className={`text-mark-highlight ${markClassName}`}
           data-mark-id={mark.id}
         >
           {mark.text}
