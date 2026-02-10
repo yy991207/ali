@@ -17,6 +17,17 @@ interface NoteItem {
   createdAt: Date
 }
 
+type MarkFilterType = 'important' | 'question' | 'todo'
+interface MarkFilterState {
+  showMarkedOnly: boolean
+  markTypes: MarkFilterType[]
+}
+
+interface SpeakerFilterState {
+  useAll: boolean
+  speakerIds: number[]
+}
+
 // 导入JSON数据
 import labInfoData from '../getAllLabInfo.json'
 import transResultData from '../getTransResult.json'
@@ -32,6 +43,15 @@ function App() {
   const [isNotePanelOpen, setIsNotePanelOpen] = useState(false)
   const [notes, setNotes] = useState<NoteItem[]>([])
   const [isVideoCollapsed, setIsVideoCollapsed] = useState(false)
+  const [markFilter, setMarkFilter] = useState<MarkFilterState>({
+    showMarkedOnly: false,
+    markTypes: ['important', 'question', 'todo']
+  })
+  const [speakerFilter, setSpeakerFilter] = useState<SpeakerFilterState>({
+    useAll: true,
+    speakerIds: []
+  })
+  const [filteredTranscript, setFilteredTranscript] = useState<ParsedTranscript | null>(null)
 
   // 加载数据
   useEffect(() => {
@@ -53,6 +73,7 @@ function App() {
       if (transData.data?.result) {
         const parsed = JSON.parse(transData.data.result)
         setParsedTranscript(parsed)
+        setFilteredTranscript(parsed)
       }
 
       setLoading(false)
@@ -123,6 +144,29 @@ function App() {
   const handleSentenceClick = (time: number) => {
     setCurrentTime(time / 1000)
   }
+
+  // 发言人筛选：由后端处理，前端只渲染结果
+  const handleSpeakerFilterChange = useCallback(async (nextFilter: SpeakerFilterState) => {
+    setSpeakerFilter(nextFilter)
+    if (!parsedTranscript) return
+    if (nextFilter.useAll) {
+      setFilteredTranscript(parsedTranscript)
+      return
+    }
+    try {
+      const res = await fetch('/api/transcript/filter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ speakerIds: nextFilter.speakerIds })
+      })
+      if (!res.ok) throw new Error('筛选失败')
+      const json = await res.json() as { code: number; data?: ParsedTranscript }
+      if (json?.code !== 0 || !json.data) return
+      setFilteredTranscript(json.data)
+    } catch {
+      // 接口异常时不阻断页面交互
+    }
+  }, [parsedTranscript])
 
   // 截取视频帧
   const captureVideoFrame = useCallback((video: HTMLVideoElement): string => {
@@ -244,6 +288,10 @@ function App() {
                   onTimeUpdate={handleTimeUpdate}
                   isCollapsed={isVideoCollapsed}
                   onToggleCollapse={() => setIsVideoCollapsed(!isVideoCollapsed)}
+                  markFilter={markFilter}
+                  onMarkFilterChange={setMarkFilter}
+                  speakerFilter={speakerFilter}
+                  onSpeakerFilterChange={handleSpeakerFilterChange}
                 />
               </div>
             </div>
@@ -263,9 +311,10 @@ function App() {
 
                 {/* 转写文本面板 */}
                 <TranscriptPanel
-                  paragraphs={parsedTranscript.pg}
+                  paragraphs={(filteredTranscript || parsedTranscript).pg}
                   currentTime={currentTime}
                   onSentenceClick={handleSentenceClick}
+                  markFilter={markFilter}
                 />
               </div>
             </div>

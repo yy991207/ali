@@ -342,21 +342,44 @@
   margin-top: 4px;
 }
 
-.filter-tag {
-  font-size: 12px;
-  line-height: 1;
+.filter-mark-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
-.filter-tag.blue {
-  color: #1890ff;
+.filter-mark-btn svg {
+  width: 12px;
+  height: 12px;
 }
 
-.filter-tag.pink {
-  color: #eb2f96;
+.filter-mark-btn.blue {
+  background: #60a5fa;
 }
 
-.filter-tag.yellow {
-  color: #faad14;
+.filter-mark-btn.pink {
+  background: #f472b6;
+}
+
+.filter-mark-btn.yellow {
+  background: #fbbf24;
+}
+
+.filter-mark-btn.active {
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
+}
+
+.filter-mark-btn:not(.active) {
+  opacity: 0.45;
 }
 
 .filter-divider {

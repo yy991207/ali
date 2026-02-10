@@ -18,7 +18,11 @@ import {
   FilterOutlined,
   DownOutlined,
   RobotOutlined,
-  EditOutlined
+  EditOutlined,
+  PushpinOutlined,
+  QuestionCircleOutlined,
+  CheckCircleOutlined,
+  UserOutlined
 } from '@ant-design/icons'
 import { AgendaItem, TranscriptParagraph } from '../../types'
 import { formatTime, formatTimeFromMs } from '../../utils/time'
@@ -42,6 +46,16 @@ interface VideoPlayerProps {
   onTimeUpdate: (time: number) => void
   isCollapsed?: boolean
   onToggleCollapse?: () => void
+  markFilter: {
+    showMarkedOnly: boolean
+    markTypes: Array<'important' | 'question' | 'todo'>
+  }
+  onMarkFilterChange: (next: { showMarkedOnly: boolean; markTypes: Array<'important' | 'question' | 'todo'> }) => void
+  speakerFilter: {
+    useAll: boolean
+    speakerIds: number[]
+  }
+  onSpeakerFilterChange: (next: { useAll: boolean; speakerIds: number[] }) => void
 }
 
 // 播放速度选项
@@ -55,7 +69,11 @@ export default function VideoPlayer({
   currentTime,
   onTimeUpdate,
   isCollapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  markFilter,
+  onMarkFilterChange,
+  speakerFilter,
+  onSpeakerFilterChange
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const playerRef = useRef<HTMLDivElement>(null)
@@ -78,20 +96,25 @@ export default function VideoPlayer({
   const SEGMENT_GAP_PX = 6
   
   // 筛选状态
-  const [showMarkedOnly, setShowMarkedOnly] = useState(false)
-  const [selectedSpeakers, setSelectedSpeakers] = useState<string[]>(['all'])
+  const filteredTranscriptMarks = useMemo(() => {
+    const types = markFilter?.markTypes || []
+    if (types.length === 0) return []
+    return transcriptMarks.filter(mark => types.includes(mark.type))
+  }, [transcriptMarks, markFilter])
   
   // 获取所有发言人列表
   const speakerList = useMemo(() => {
-    const speakers = new Set<string>()
+    const speakers = new Set<number>()
     paragraphs?.forEach(pg => {
       pg?.sc?.forEach(sentence => {
         if (sentence.si !== undefined) {
-          speakers.add(`发言人 ${sentence.si + 1}`)
+          speakers.add(sentence.si)
         }
       })
     })
     return Array.from(speakers)
+      .sort((a, b) => a - b)
+      .map(id => ({ id, label: `发言人 ${id}` }))
   }, [paragraphs])
 
   // 筛选面板
@@ -102,16 +125,46 @@ export default function VideoPlayer({
         <div className="filter-title">筛选</div>
         <div className="filter-section">
           <Checkbox
-            checked={showMarkedOnly}
-            onChange={(e) => setShowMarkedOnly(e.target.checked)}
+            checked={markFilter.showMarkedOnly}
+            onChange={(e) => onMarkFilterChange({ ...markFilter, showMarkedOnly: e.target.checked })}
             className="filter-checkbox"
           >
             <span className="filter-label">只看标记内容</span>
           </Checkbox>
           <div className="filter-tags">
-            <span className="filter-tag blue">●</span>
-            <span className="filter-tag pink">●</span>
-            <span className="filter-tag yellow">●</span>
+            <button
+              type="button"
+              className={`filter-mark-btn blue ${markFilter.markTypes.includes('important') ? 'active' : ''}`}
+              onClick={() => {
+                const hasType = markFilter.markTypes.includes('important')
+                const next = hasType ? markFilter.markTypes.filter(t => t !== 'important') : [...markFilter.markTypes, 'important']
+                onMarkFilterChange({ ...markFilter, showMarkedOnly: true, markTypes: next })
+              }}
+            >
+              <PushpinOutlined />
+            </button>
+            <button
+              type="button"
+              className={`filter-mark-btn pink ${markFilter.markTypes.includes('question') ? 'active' : ''}`}
+              onClick={() => {
+                const hasType = markFilter.markTypes.includes('question')
+                const next = hasType ? markFilter.markTypes.filter(t => t !== 'question') : [...markFilter.markTypes, 'question']
+                onMarkFilterChange({ ...markFilter, showMarkedOnly: true, markTypes: next })
+              }}
+            >
+              <QuestionCircleOutlined />
+            </button>
+            <button
+              type="button"
+              className={`filter-mark-btn yellow ${markFilter.markTypes.includes('todo') ? 'active' : ''}`}
+              onClick={() => {
+                const hasType = markFilter.markTypes.includes('todo')
+                const next = hasType ? markFilter.markTypes.filter(t => t !== 'todo') : [...markFilter.markTypes, 'todo']
+                onMarkFilterChange({ ...markFilter, showMarkedOnly: true, markTypes: next })
+              }}
+            >
+              <CheckCircleOutlined />
+            </button>
           </div>
         </div>
         <div className="filter-divider" />
@@ -129,12 +182,12 @@ export default function VideoPlayer({
       <div className="speaker-scroll-area">
         <div className="speaker-options">
           <Checkbox
-            checked={selectedSpeakers.includes('all')}
+            checked={speakerFilter.useAll}
             onChange={(e) => {
               if (e.target.checked) {
-                setSelectedSpeakers(['all'])
+                onSpeakerFilterChange({ useAll: true, speakerIds: [] })
               } else {
-                setSelectedSpeakers([])
+                onSpeakerFilterChange({ useAll: false, speakerIds: [] })
               }
             }}
             className="speaker-checkbox"
@@ -143,19 +196,29 @@ export default function VideoPlayer({
           </Checkbox>
           {speakerList.map((speaker) => (
             <Checkbox
-              key={speaker}
-              checked={selectedSpeakers.includes(speaker) || selectedSpeakers.includes('all')}
+              key={speaker.id}
+              checked={speakerFilter.useAll || speakerFilter.speakerIds.includes(speaker.id)}
               onChange={(e) => {
+                if (speakerFilter.useAll) {
+                  if (!e.target.checked) {
+                    const allIds = speakerList.map(item => item.id)
+                    const nextIds = allIds.filter(id => id !== speaker.id)
+                    onSpeakerFilterChange({ useAll: false, speakerIds: nextIds })
+                  }
+                  return
+                }
                 if (e.target.checked) {
-                  setSelectedSpeakers(prev => [...prev.filter(s => s !== 'all'), speaker])
+                  const nextIds = [...speakerFilter.speakerIds, speaker.id]
+                  onSpeakerFilterChange({ useAll: false, speakerIds: nextIds })
                 } else {
-                  setSelectedSpeakers(prev => prev.filter(s => s !== speaker))
+                  const nextIds = speakerFilter.speakerIds.filter(id => id !== speaker.id)
+                  onSpeakerFilterChange({ useAll: false, speakerIds: nextIds })
                 }
               }}
               className="speaker-checkbox"
             >
-              <span className="speaker-avatar">👤</span>
-              <span className="speaker-label">{speaker}</span>
+              <UserOutlined className="speaker-avatar" />
+              <span className="speaker-label">{speaker.label}</span>
             </Checkbox>
           ))}
         </div>
@@ -610,7 +673,7 @@ export default function VideoPlayer({
           <div className="progress-container">
             {/* 用户标记（来自转写文本） */}
             <div className="user-mark-layer">
-              {transcriptMarks.map((mark) => {
+              {filteredTranscriptMarks.map((mark) => {
                 const leftPercent = (mark.timeMs / 1000 / duration) * 100
                 if (!Number.isFinite(leftPercent)) return null
                 return (
@@ -890,7 +953,7 @@ export default function VideoPlayer({
             <div className="mini-progress-container">
               {/* 用户标记（来自转写文本） */}
               <div className="mini-user-mark-layer">
-                {transcriptMarks.map((mark) => {
+                {filteredTranscriptMarks.map((mark) => {
                   const leftPercent = (mark.timeMs / 1000 / duration) * 100
                   if (!Number.isFinite(leftPercent)) return null
                   return (

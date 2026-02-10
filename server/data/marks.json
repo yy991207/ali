@@ -1,0 +1,32 @@
+{
+  "groupMarks": [],
+  "textMarks": [
+    {
+      "id": "sel-52000",
+      "groupId": "group-750",
+      "startTimeMs": 52000.0,
+      "endTimeMs": 57000.0,
+      "text": "比亚地区的纪念当时的解放",
+      "type": "important",
+      "color": "#60a5fa"
+    },
+    {
+      "id": "sel-34218",
+      "groupId": "group-350",
+      "startTimeMs": 34218.0,
+      "endTimeMs": 39218.0,
+      "text": "他们开始大肆扩张，逐渐",
+      "type": "question",
+      "color": "#f472b6"
+    },
+    {
+      "id": "sel-40918",
+      "groupId": "group-520",
+      "startTimeMs": 40918.0,
+      "endTimeMs": 45918.0,
+      "text": "亚非拉尤其是亚非拉地区的",
+      "type": "todo",
+      "color": "#fbbf24"
+    }
+  ]
+}

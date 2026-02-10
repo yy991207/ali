@@ -21,6 +21,10 @@ interface TranscriptPanelProps {
   paragraphs: TranscriptParagraph[]
   currentTime: number
   onSentenceClick?: (time: number) => void
+  markFilter?: {
+    showMarkedOnly: boolean
+    markTypes: Array<'important' | 'question' | 'todo'>
+  }
 }
 
 type MarkType = 'important' | 'question' | 'todo' | null
@@ -225,7 +229,8 @@ const SpeakerGroupItem = memo(function SpeakerGroupItem({
 export default function TranscriptPanel({
   paragraphs,
   currentTime,
-  onSentenceClick
+  onSentenceClick,
+  markFilter
 }: TranscriptPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const activeGroupRef = useRef<HTMLDivElement>(null)
@@ -236,6 +241,12 @@ export default function TranscriptPanel({
   const [forceScrollSentence, setForceScrollSentence] = useState<TranscriptSentence | null>(null)
   const [groupMarks, setGroupMarks] = useState<Record<string, MarkType>>({})
   const [renderTimeMs, setRenderTimeMs] = useState(0)
+  const groupMarkMetaRef = useRef<Record<string, { groupId: string; type: 'important' | 'question' | 'todo'; timeMs: number; text: string }>>({})
+  const MARK_API_URL = '/api/marks'
+  const marksLoadedRef = useRef(false)
+  const marksSaveTimerRef = useRef<number | null>(null)
+  const marksLoadTimerRef = useRef<number | null>(null)
+  const lastSavedPayloadRef = useRef<string>('')
   const [selectionMenu, setSelectionMenu] = useState<{
     visible: boolean
     x: number
@@ -255,6 +266,124 @@ export default function TranscriptPanel({
     type: 'important' | 'question' | 'todo'
     color: string
   }>>([])
+
+  // 从后端加载标记：刷新后保持标记与筛选可用
+  useEffect(() => {
+    let canceled = false
+    const controller = new AbortController()
+
+    const loadMarks = async (attempt: number) => {
+      try {
+        const res = await fetch(MARK_API_URL, { signal: controller.signal })
+        if (!res.ok) throw new Error('获取标记失败')
+        const json = await res.json() as {
+          code: number
+          message: string
+          data?: {
+            groupMarks?: Array<{ groupId: string; type: 'important' | 'question' | 'todo'; timeMs: number; text: string }>
+            textMarks?: Array<{
+              id: string
+              groupId: string
+              startTimeMs: number
+              endTimeMs: number
+              text: string
+              type: 'important' | 'question' | 'todo'
+              color: string
+            }>
+          }
+        }
+        if (canceled) return
+        if (json?.code !== 0) throw new Error('标记接口异常')
+
+        const loadedGroupMarks = json.data?.groupMarks || []
+        const loadedTextMarks = json.data?.textMarks || []
+
+        if (loadedGroupMarks.length) {
+          const nextGroupMarks: Record<string, MarkType> = {}
+          const nextMeta: Record<string, { groupId: string; type: 'important' | 'question' | 'todo'; timeMs: number; text: string }> = {}
+          loadedGroupMarks.forEach((item) => {
+            if (!item?.groupId || !item?.type) return
+            nextGroupMarks[item.groupId] = item.type
+            nextMeta[item.groupId] = item
+            // 同步进度条标记
+            window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
+              detail: { groupId: item.groupId, type: item.type, timeMs: item.timeMs, text: item.text }
+            }))
+          })
+          groupMarkMetaRef.current = nextMeta
+          setGroupMarks(nextGroupMarks)
+        }
+
+        if (loadedTextMarks.length) {
+          setTextMarks(loadedTextMarks)
+          // 同步进度条标记
+          loadedTextMarks.forEach((item) => {
+            if (!item?.id) return
+            window.dispatchEvent(new CustomEvent('textMarkAdded', { detail: item }))
+          })
+        }
+        const snapshot = JSON.stringify({
+          groupMarks: loadedGroupMarks,
+          textMarks: loadedTextMarks
+        })
+        lastSavedPayloadRef.current = snapshot
+        marksLoadedRef.current = true
+      } catch {
+        if (canceled) return
+        if (attempt < 2) {
+          // 后端未就绪时做轻量重试，避免只看到 POST
+          marksLoadTimerRef.current = window.setTimeout(() => loadMarks(attempt + 1), 500)
+          return
+        }
+        // 多次失败后允许继续使用并支持写回
+        marksLoadedRef.current = true
+      }
+    }
+
+    loadMarks(0)
+    return () => {
+      canceled = true
+      if (marksLoadTimerRef.current) {
+        window.clearTimeout(marksLoadTimerRef.current)
+        marksLoadTimerRef.current = null
+      }
+      controller.abort()
+    }
+  }, [])
+
+  // 标记写回后端：避免频繁写入，这里做轻量防抖
+  useEffect(() => {
+    if (!marksLoadedRef.current) return
+    if (marksSaveTimerRef.current) {
+      window.clearTimeout(marksSaveTimerRef.current)
+      marksSaveTimerRef.current = null
+    }
+    marksSaveTimerRef.current = window.setTimeout(() => {
+      const groupMarksList = Object.values(groupMarkMetaRef.current || {})
+      const payload = {
+        groupMarks: groupMarksList,
+        textMarks
+      }
+      const payloadSnapshot = JSON.stringify(payload)
+      if (payloadSnapshot === lastSavedPayloadRef.current) return
+      lastSavedPayloadRef.current = payloadSnapshot
+      // 标记写回是耗时 IO，异步处理更稳妥
+      fetch(MARK_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(() => {
+        // 写回失败不影响当前交互
+      })
+    }, 300)
+
+    return () => {
+      if (marksSaveTimerRef.current) {
+        window.clearTimeout(marksSaveTimerRef.current)
+        marksSaveTimerRef.current = null
+      }
+    }
+  }, [groupMarks, textMarks])
 
   const getScrollContainerEl = useCallback(() => {
     // antd Card 可滚动区域在 .ant-card-body
@@ -338,6 +467,29 @@ export default function TranscriptPanel({
 
     return groups
   }, [paragraphs])
+
+  const selectedMarkTypes = markFilter?.markTypes
+    ?? (['important', 'question', 'todo'] as Array<'important' | 'question' | 'todo'>)
+
+  const markedGroupSet = useMemo(() => {
+    const set = new Set<string>()
+    for (const [groupId, type] of Object.entries(groupMarks)) {
+      if (type && selectedMarkTypes.includes(type)) {
+        set.add(groupId)
+      }
+    }
+    for (const mark of textMarks) {
+      if (mark?.groupId && selectedMarkTypes.includes(mark.type)) {
+        set.add(mark.groupId)
+      }
+    }
+    return set
+  }, [groupMarks, textMarks, selectedMarkTypes])
+
+  const visibleGroups = useMemo(() => {
+    if (!markFilter?.showMarkedOnly) return speakerGroups
+    return speakerGroups.filter(group => markedGroupSet.has(group.id))
+  }, [markFilter?.showMarkedOnly, speakerGroups, markedGroupSet])
 
   // 把所有句子拍平成列表，便于用二分查找提升性能
   const allSentences = useMemo(() => {
@@ -578,6 +730,16 @@ export default function TranscriptPanel({
   }, [onSentenceClick])
 
   const handleMarkChange = useCallback((group: SpeakerGroup, type: MarkType, previewText: string) => {
+    if (type) {
+      groupMarkMetaRef.current[group.id] = {
+        groupId: group.id,
+        type,
+        timeMs: group.startTime,
+        text: previewText
+      }
+    } else {
+      delete groupMarkMetaRef.current[group.id]
+    }
     setGroupMarks(prev => ({ ...prev, [group.id]: type }))
     window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
       detail: { groupId: group.id, type, timeMs: group.startTime, text: previewText }
@@ -739,7 +901,7 @@ export default function TranscriptPanel({
       )}
 
       <div className="transcript-content">
-        {speakerGroups.map((group) => {
+        {visibleGroups.map((group) => {
           const isActive = currentGroup?.id === group.id
           const isForceActive = forceScrollGroup?.id === group.id
           const shouldHighlight = isActive || isForceActive

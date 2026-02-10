@@ -19,6 +19,7 @@
 - [项目概述](#项目概述)
 - [技术架构](#技术架构)
 - [环境搭建](#环境搭建)
+- [后端服务](#后端服务)
 - [项目结构](#项目结构)
 - [核心功能](#核心功能)
 - [二次开发指南](#二次开发指南)
@@ -67,6 +68,13 @@
 | Vite | 6.1.0 | 构建工具 |
 | Day.js | 1.11.13 | 日期时间处理 |
 
+### 后端技术栈
+
+| 技术 | 用途 |
+|------|------|
+| FastAPI | 提供标记 GET/POST 接口 |
+| Uvicorn | 本地开发服务 |
+
 ### 项目特点
 
 - **TypeScript 全栈类型安全**：从数据接口到组件 props 完整类型定义
@@ -83,6 +91,9 @@
 - Node.js >= 18.0.0
 - npm >= 9.0.0 或 yarn >= 1.22.0
 - Git >= 2.30.0
+- conda 已安装并可用
+
+> 运行服务前需要先 `conda activate deepagent`。
 
 ### 安装流程
 
@@ -99,15 +110,23 @@ cd ali
 npm install
 ```
 
-3. **启动开发服务器**
+3. **一键启动前后端（推荐）**
 
 ```bash
-npm run dev
+bash scripts/dev_start.sh
 ```
 
 4. **访问应用**
 
 浏览器打开 http://localhost:5173
+
+### 手动启动（可选）
+
+```bash
+conda activate deepagent
+conda run -n mark uvicorn server.main:app --reload --port 8000
+npm run dev
+```
 
 ### 构建生产版本
 
@@ -116,6 +135,31 @@ npm run build
 ```
 
 构建产物将输出到 `dist/` 目录。
+
+---
+
+## 后端服务
+
+### 标记接口
+
+- `GET /api/marks`：拉取当前标记数据
+- `POST /api/marks`：写回标记数据（只返回成功状态，不回传数据）
+
+### 发言人筛选接口
+
+- `POST /api/transcript/filter`：按发言人筛选转写数据并返回结果
+
+### 数据存储
+
+- 标记数据存放在 `server/data/marks.json`
+- 前端启动时会先 GET 拉取数据，标记变化后再 POST 写回
+
+### 前后端联动逻辑
+
+- “筛选”只影响前端显示规则，不会触发 GET
+- 页面刷新或首次进入时会 GET 一次
+- 标记变化会写回 POST，且有去重，不会在加载后立刻写回
+- 发言人筛选由后端处理，前端只负责渲染结果
 
 ---
 
@@ -140,6 +184,13 @@ ali/
 │   ├── App.css                   # 应用样式
 │   ├── main.tsx                  # 应用入口
 │   └── index.css                 # 全局样式
+├── server/                       # 后端服务（标记接口）
+│   ├── data/                      # 标记数据
+│   │   └── marks.json             # 标记数据文件
+│   ├── main.py                    # FastAPI 服务入口
+│   └── requirements.txt           # 后端依赖
+├── scripts/                      # 启动脚本
+│   └── dev_start.sh               # 一键启动前后端
 ├── doc/                          # 文档目录（已忽略）
 ├── .gitignore                    # Git 忽略配置
 ├── index.html                    # HTML 模板
