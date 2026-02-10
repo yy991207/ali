@@ -110,11 +110,11 @@ const SpeakerGroupItem = memo(function SpeakerGroupItem({
         )
       }
 
-      // 添加高亮标记的文本 - 使用与整段标记相同的 CSS 类名
+      // 添加高亮标记的文本 - 复用整段标记的样式
       parts.push(
         <span
           key={`mark-${mark.id}`}
-          className={`marked-${mark.type}`}
+          className={`text-mark-highlight ${mark.type ? `marked-${mark.type}` : ''}`}
           data-mark-id={mark.id}
         >
           {mark.text}

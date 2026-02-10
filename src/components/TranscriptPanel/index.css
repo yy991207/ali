@@ -235,20 +235,28 @@
 }
 
 /* 文本标记背景（与右上角按钮颜色保持一致） */
-.group-text.marked-important {
+.group-text.marked-important,
+.text-mark-highlight.marked-important {
   background: rgba(96, 165, 250, 0.35);
   border-radius: 6px;
   padding: 2px 4px;
 }
 
-.group-text.marked-question {
+.group-text.marked-question,
+.text-mark-highlight.marked-question {
   background: rgba(244, 114, 182, 0.30);
   border-radius: 6px;
   padding: 2px 4px;
 }
 
-.group-text.marked-todo {
+.group-text.marked-todo,
+.text-mark-highlight.marked-todo {
   background: rgba(251, 191, 36, 0.30);
+  border-radius: 6px;
+  padding: 2px 4px;
+}
+
+.text-mark-highlight {
   border-radius: 6px;
   padding: 2px 4px;
 }
