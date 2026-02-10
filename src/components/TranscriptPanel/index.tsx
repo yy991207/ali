@@ -75,7 +75,7 @@ const SpeakerGroupItem = memo(function SpeakerGroupItem({
     onSelect(group)
   }, [group, onSelect])
 
-  // 渲染带高亮的文本
+  // 渲染带高亮的文本 - 使用与整段标记相同的样式
   const renderHighlightedText = useCallback(() => {
     if (!textMarks || textMarks.length === 0) {
       return group.text
@@ -110,12 +110,11 @@ const SpeakerGroupItem = memo(function SpeakerGroupItem({
         )
       }
 
-      // 添加高亮标记的文本
-      const markClassName = mark.type ? `marked-${mark.type}` : ''
+      // 添加高亮标记的文本 - 使用与整段标记相同的 CSS 类名
       parts.push(
         <span
           key={`mark-${mark.id}`}
-          className={`text-mark-highlight ${markClassName}`}
+          className={`marked-${mark.type}`}
           data-mark-id={mark.id}
         >
           {mark.text}
