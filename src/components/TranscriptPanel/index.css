@@ -36,6 +36,7 @@
   align-items: center;
   gap: 12px;
   padding: 6px 0;
+  flex-wrap: nowrap;
 }
 
 .selection-menu-row + .selection-menu-row {
@@ -71,6 +72,7 @@
   font-size: 14px;
   font-weight: 600;
   color: #1f2340;
+  white-space: nowrap;
 }
 
 .selection-menu-mark-actions {

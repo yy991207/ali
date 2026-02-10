@@ -35,6 +35,7 @@ export default function TranscriptPanel({
   const isSelectingRef = useRef(false)
   const selectionRangeRef = useRef<Range | null>(null)
   const selectionMenuRafRef = useRef<number | null>(null)
+  const selectionMenuRef = useRef<HTMLDivElement | null>(null)
   const [forceScrollSentence, setForceScrollSentence] = useState<TranscriptSentence | null>(null)
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
   const [groupMarks, setGroupMarks] = useState<Record<string, MarkType>>({})
@@ -45,17 +46,37 @@ export default function TranscriptPanel({
     y: number
     startTimeMs: number
     text: string
-  }>({ visible: false, x: 0, y: 0, startTimeMs: 0, text: '' })
+    anchorGroupId?: string
+  }>({ visible: false, x: 0, y: 0, startTimeMs: 0, text: '', anchorGroupId: undefined })
 
   const getScrollContainerEl = useCallback(() => {
     // antd Card 可滚动区域在 .ant-card-body
     return (containerRef.current?.querySelector('.ant-card-body') as HTMLDivElement | null) || null
   }, [])
 
-  const updateSelectionMenuPosition = useCallback((range: Range) => {
+  const updateSelectionMenuPosition = useCallback((range: Range | null, anchorGroupId?: string) => {
     const scrollEl = getScrollContainerEl()
     if (!scrollEl) return
 
+    if (anchorGroupId) {
+      const anchor = scrollEl.querySelector(`[data-group-id="${anchorGroupId}"]`) as HTMLElement | null
+      if (!anchor) return
+      const menuWidth = selectionMenuRef.current?.offsetWidth || 0
+      const scrollLeft = scrollEl.scrollLeft
+      const maxX = scrollLeft + scrollEl.clientWidth - menuWidth - 12
+      const minX = scrollLeft + 12
+      const preferredX = anchor.offsetLeft + anchor.offsetWidth - (menuWidth || 160) - 12
+      const x = Math.max(minX, Math.min(maxX, preferredX))
+      const y = anchor.offsetTop + anchor.offsetHeight + 8
+      setSelectionMenu(prev => {
+        if (!prev.visible) return prev
+        if (Math.abs(prev.x - x) < 0.5 && Math.abs(prev.y - y) < 0.5) return prev
+        return { ...prev, x, y }
+      })
+      return
+    }
+
+    if (!range) return
     const rangeRect = range.getBoundingClientRect()
     if (!rangeRect || rangeRect.width === 0 || rangeRect.height === 0) return
 
@@ -63,13 +84,11 @@ export default function TranscriptPanel({
     const centerX = rangeRect.left + rangeRect.width / 2
     const bottomY = rangeRect.bottom
 
-    // absolute 定位：相对 scroll container（而不是视口 fixed），这样滚动时能跟着走
     const x = centerX - scrollRect.left + scrollEl.scrollLeft
-    const y = bottomY - scrollRect.top + scrollEl.scrollTop + 8
+    const y = bottomY - scrollRect.top + scrollEl.scrollTop + 12
 
     setSelectionMenu(prev => {
       if (!prev.visible) return prev
-      // 避免滚动时高频 setState，微小变化不更新
       if (Math.abs(prev.x - x) < 0.5 && Math.abs(prev.y - y) < 0.5) return prev
       return { ...prev, x, y }
     })
@@ -263,20 +282,26 @@ export default function TranscriptPanel({
     // 记录 range：用于滚动时跟随更新位置
     selectionRangeRef.current = range.cloneRange()
 
-    // 使用 absolute 定位：相对滚动容器，这样滚动时能跟着走
+    // 使用 absolute 定位：直接放在该文段下方右侧，避免遮挡正文
     const scrollEl = getScrollContainerEl()
-    const scrollRect = scrollEl?.getBoundingClientRect()
+    const groupEl = containerEl.closest('.speaker-group') as HTMLElement | null
     const centerX = rect.left + rect.width / 2
     const bottomY = rect.bottom
-    const x = scrollEl && scrollRect ? (centerX - scrollRect.left + scrollEl.scrollLeft) : centerX
-    const y = scrollEl && scrollRect ? (bottomY - scrollRect.top + scrollEl.scrollTop + 8) : (bottomY + 10)
+    const menuWidth = selectionMenuRef.current?.offsetWidth || 0
+    const preferredX = groupEl ? (groupEl.offsetLeft + groupEl.offsetWidth - (menuWidth || 160) - 12) : centerX
+    const scrollLeft = scrollEl?.scrollLeft || 0
+    const maxX = scrollEl ? (scrollLeft + scrollEl.clientWidth - menuWidth - 12) : preferredX
+    const minX = scrollEl ? (scrollLeft + 12) : preferredX
+    const x = scrollEl ? Math.max(minX, Math.min(maxX, preferredX)) : preferredX
+    const y = groupEl ? (groupEl.offsetTop + groupEl.offsetHeight + 8) : (bottomY + 12)
 
     setSelectionMenu({
       visible: true,
       x,
       y,
       startTimeMs: selectionStartTimeMs,
-      text: selectedText
+      text: selectedText,
+      anchorGroupId: group.id
     })
   }, [getScrollContainerEl])
 
@@ -288,11 +313,12 @@ export default function TranscriptPanel({
     const handleScroll = () => {
       if (!selectionMenu.visible) return
       const range = selectionRangeRef.current
-      if (!range) return
+      const anchorId = selectionMenu.anchorGroupId
+      if (!range && !anchorId) return
       if (selectionMenuRafRef.current !== null) return
       selectionMenuRafRef.current = window.requestAnimationFrame(() => {
         selectionMenuRafRef.current = null
-        updateSelectionMenuPosition(range)
+        updateSelectionMenuPosition(range, anchorId)
       })
     }
 
@@ -305,6 +331,38 @@ export default function TranscriptPanel({
       }
       scrollEl.removeEventListener('scroll', handleScroll)
       window.removeEventListener('resize', handleScroll)
+    }
+  }, [selectionMenu.visible, selectionMenu.anchorGroupId, updateSelectionMenuPosition])
+
+  useEffect(() => {
+    if (!selectionMenu.visible) return
+    const rafId = window.requestAnimationFrame(() => {
+      updateSelectionMenuPosition(selectionRangeRef.current, selectionMenu.anchorGroupId)
+    })
+    return () => window.cancelAnimationFrame(rafId)
+  }, [selectionMenu.visible, selectionMenu.anchorGroupId, updateSelectionMenuPosition])
+
+  // 点击页面其他位置关闭弹窗
+  useEffect(() => {
+    if (!selectionMenu.visible) return
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const menuEl = containerRef.current?.querySelector('.selection-menu')
+      if (menuEl && !menuEl.contains(e.target as Node)) {
+        setSelectionMenu(prev => ({ ...prev, visible: false }))
+        window.getSelection()?.removeAllRanges()
+        selectionRangeRef.current = null
+      }
+    }
+
+    // 延迟添加事件监听，避免立即触发
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside)
+    }, 100)
+
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [selectionMenu.visible])
 
@@ -340,6 +398,7 @@ export default function TranscriptPanel({
       {/* 选中文本后的操作浮窗 */}
       {selectionMenu.visible && (
         <div
+          ref={selectionMenuRef}
           className="selection-menu"
           style={{ left: selectionMenu.x, top: selectionMenu.y }}
           onMouseDown={(e) => e.preventDefault()}
@@ -509,11 +568,23 @@ const SpeakerGroupItem = memo(function SpeakerGroupItem({
   onTextMouseUp: (group: SpeakerGroup, el: HTMLElement) => void
   onTextMouseDown: () => void
 }) {
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    // 检查是否有文本被选中
+    const selection = window.getSelection()
+    const selectedText = selection?.toString().trim() || ''
+    
+    // 如果有选中的文本，不触发整段选中
+    if (selectedText.length > 0) {
+      return
+    }
+    onSelect(group)
+  }, [group, onSelect])
+
   return (
     <div
       ref={shouldHighlight ? activeGroupRef : null}
       className={`speaker-group ${shouldHighlight ? 'active' : ''} ${isSelected ? 'selected' : ''}`}
-      onClick={() => onSelect(group)}
+      onClick={handleClick}
     >
       {/* 右上角标记按钮：仅 hover 时显示 */}
       <div className="group-actions" onClick={(e) => e.stopPropagation()}>
