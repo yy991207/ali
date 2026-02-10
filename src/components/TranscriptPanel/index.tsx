@@ -29,11 +29,11 @@ type MarkType = 'important' | 'question' | 'todo' | null
 interface SpeakerGroupItemProps {
   group: SpeakerGroup
   shouldHighlight: boolean
-  isSelected: boolean
   markType: MarkType
   markedClassName: string
   previewText: string
   activeGroupRef: React.RefObject<HTMLDivElement | null>
+  hideActions: boolean
   onSelect: (group: SpeakerGroup) => void
   onMarkChange: (group: SpeakerGroup, type: MarkType, previewText: string) => void
   onTextMouseUp: (group: SpeakerGroup, el: HTMLElement) => void
@@ -52,11 +52,11 @@ interface SpeakerGroupItemProps {
 const SpeakerGroupItem = memo(function SpeakerGroupItem({
   group,
   shouldHighlight,
-  isSelected,
   markType,
   markedClassName,
   previewText,
   activeGroupRef,
+  hideActions,
   onSelect,
   onMarkChange,
   onTextMouseUp,
@@ -139,56 +139,58 @@ const SpeakerGroupItem = memo(function SpeakerGroupItem({
   return (
     <div
       ref={shouldHighlight ? activeGroupRef : null}
-      className={`speaker-group ${shouldHighlight ? 'active' : ''} ${isSelected ? 'selected' : ''}`}
+      className={`speaker-group ${shouldHighlight ? 'active' : ''}`}
       onClick={handleClick}
     >
       {/* 右上角标记按钮：仅 hover 时显示 */}
-      <div className="group-actions" onClick={(e) => e.stopPropagation()}>
-        <Tooltip title="标记为重点" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
-          <Button
-            type="text"
-            size="small"
-            className={`mark-btn mark-important ${markType === 'important' ? 'active' : ''}`}
-            icon={<PushpinOutlined />}
-            onClick={() => {
-              onMarkChange(group, 'important', previewText)
-            }}
-          />
-        </Tooltip>
-        <Tooltip title="标记为问题" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
-          <Button
-            type="text"
-            size="small"
-            className={`mark-btn mark-question ${markType === 'question' ? 'active' : ''}`}
-            icon={<QuestionCircleOutlined />}
-            onClick={() => {
-              onMarkChange(group, 'question', previewText)
-            }}
-          />
-        </Tooltip>
-        <Tooltip title="标记为待办" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
-          <Button
-            type="text"
-            size="small"
-            className={`mark-btn mark-todo ${markType === 'todo' ? 'active' : ''}`}
-            icon={<CheckCircleOutlined />}
-            onClick={() => {
-              onMarkChange(group, 'todo', previewText)
-            }}
-          />
-        </Tooltip>
-        <Tooltip title="取消标记" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
-          <Button
-            type="text"
-            size="small"
-            className="mark-btn mark-clear"
-            icon={<StopOutlined />}
-            onClick={() => {
-              onMarkChange(group, null, previewText)
-            }}
-          />
-        </Tooltip>
-      </div>
+      {!hideActions && (
+        <div className="group-actions" onClick={(e) => e.stopPropagation()}>
+          <Tooltip title="标记为重点" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
+            <Button
+              type="text"
+              size="small"
+              className={`mark-btn mark-important ${markType === 'important' ? 'active' : ''}`}
+              icon={<PushpinOutlined />}
+              onClick={() => {
+                onMarkChange(group, 'important', previewText)
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="标记为问题" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
+            <Button
+              type="text"
+              size="small"
+              className={`mark-btn mark-question ${markType === 'question' ? 'active' : ''}`}
+              icon={<QuestionCircleOutlined />}
+              onClick={() => {
+                onMarkChange(group, 'question', previewText)
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="标记为待办" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
+            <Button
+              type="text"
+              size="small"
+              className={`mark-btn mark-todo ${markType === 'todo' ? 'active' : ''}`}
+              icon={<CheckCircleOutlined />}
+              onClick={() => {
+                onMarkChange(group, 'todo', previewText)
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="取消标记" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
+            <Button
+              type="text"
+              size="small"
+              className="mark-btn mark-clear"
+              icon={<StopOutlined />}
+              onClick={() => {
+                onMarkChange(group, null, previewText)
+              }}
+            />
+          </Tooltip>
+        </div>
+      )}
 
       {/* 头部信息：时间戳和发言人 */}
       <div className="group-header">
@@ -213,7 +215,7 @@ const SpeakerGroupItem = memo(function SpeakerGroupItem({
 }, (prev, next) => {
   return prev.group === next.group &&
     prev.shouldHighlight === next.shouldHighlight &&
-    prev.isSelected === next.isSelected &&
+    prev.hideActions === next.hideActions &&
     prev.markType === next.markType &&
     prev.markedClassName === next.markedClassName &&
     prev.previewText === next.previewText &&
@@ -232,7 +234,6 @@ export default function TranscriptPanel({
   const selectionMenuRafRef = useRef<number | null>(null)
   const selectionMenuRef = useRef<HTMLDivElement | null>(null)
   const [forceScrollSentence, setForceScrollSentence] = useState<TranscriptSentence | null>(null)
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
   const [groupMarks, setGroupMarks] = useState<Record<string, MarkType>>({})
   const [renderTimeMs, setRenderTimeMs] = useState(0)
   const [selectionMenu, setSelectionMenu] = useState<{
@@ -573,7 +574,6 @@ export default function TranscriptPanel({
   }, [selectionMenu.visible])
 
   const handleGroupClickStable = useCallback((group: SpeakerGroup) => {
-    setSelectedGroupId(group.id)
     onSentenceClick?.(group.startTime)
   }, [onSentenceClick])
 
@@ -743,7 +743,6 @@ export default function TranscriptPanel({
           const isActive = currentGroup?.id === group.id
           const isForceActive = forceScrollGroup?.id === group.id
           const shouldHighlight = isActive || isForceActive
-          const isSelected = selectedGroupId === group.id
           const markType = groupMarks[group.id] ?? null
           const markedClassName = markType ? `marked-${markType}` : ''
           const previewText = group.text.length > 18 ? `${group.text.slice(0, 18)}...` : group.text
@@ -753,11 +752,11 @@ export default function TranscriptPanel({
               key={group.id}
               group={group}
               shouldHighlight={shouldHighlight}
-              isSelected={isSelected}
               markType={markType}
               markedClassName={markedClassName}
               previewText={previewText}
               activeGroupRef={activeGroupRef}
+              hideActions={selectionMenu.visible}
               onSelect={handleGroupClickStable}
               onMarkChange={handleMarkChange}
               onTextMouseUp={handleTextMouseUp}

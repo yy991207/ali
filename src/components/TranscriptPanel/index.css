@@ -118,20 +118,6 @@
   box-shadow: 0 6px 16px rgba(96, 92, 229, 0.30);
 }
 
-.speaker-group.selected .group-text {
-  color: #fff;
-}
-
-.speaker-group.selected .timestamp {
-  color: rgba(255, 255, 255, 0.92);
-  background: rgba(255, 255, 255, 0.18);
-}
-
-.speaker-group.selected .speaker {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.18) !important;
-  border-color: transparent !important;
-}
 
 /* 右上角标记按钮组 */
 .group-actions {
@@ -147,7 +133,8 @@
   pointer-events: none;
 }
 
-.speaker-group:hover .group-actions {
+.speaker-group:hover .group-actions,
+.speaker-group.selected .group-actions {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
