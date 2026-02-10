@@ -25,6 +25,207 @@ interface TranscriptPanelProps {
 
 type MarkType = 'important' | 'question' | 'todo' | null
 
+// SpeakerGroupItem 组件定义在 TranscriptPanel 外部，通过 props 接收 textMarks
+interface SpeakerGroupItemProps {
+  group: SpeakerGroup
+  shouldHighlight: boolean
+  isSelected: boolean
+  markType: MarkType
+  markedClassName: string
+  previewText: string
+  activeGroupRef: React.RefObject<HTMLDivElement | null>
+  onSelect: (group: SpeakerGroup) => void
+  onMarkChange: (group: SpeakerGroup, type: MarkType, previewText: string) => void
+  onTextMouseUp: (group: SpeakerGroup, el: HTMLElement) => void
+  onTextMouseDown: () => void
+  textMarks: Array<{
+    id: string
+    groupId: string
+    startTimeMs: number
+    endTimeMs: number
+    text: string
+    type: 'important' | 'question' | 'todo'
+    color: string
+  }>
+}
+
+const SpeakerGroupItem = memo(function SpeakerGroupItem({
+  group,
+  shouldHighlight,
+  isSelected,
+  markType,
+  markedClassName,
+  previewText,
+  activeGroupRef,
+  onSelect,
+  onMarkChange,
+  onTextMouseUp,
+  onTextMouseDown,
+  textMarks
+}: SpeakerGroupItemProps) {
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    // 检查是否有文本被选中
+    const selection = window.getSelection()
+    const selectedText = selection?.toString().trim() || ''
+    
+    // 如果有选中的文本，不触发整段选中
+    if (selectedText.length > 0) {
+      return
+    }
+    onSelect(group)
+  }, [group, onSelect])
+
+  // 渲染带高亮的文本
+  const renderHighlightedText = useCallback(() => {
+    if (!textMarks || textMarks.length === 0) {
+      return group.text
+    }
+
+    // 获取当前组的文本标记
+    const groupMarks = textMarks.filter(mark => mark.groupId === group.id)
+    if (groupMarks.length === 0) {
+      return group.text
+    }
+
+    // 按文本位置排序
+    const sortedMarks = [...groupMarks].sort((a, b) => {
+      const idxA = group.text.indexOf(a.text)
+      const idxB = group.text.indexOf(b.text)
+      return idxA - idxB
+    })
+
+    const parts: React.ReactNode[] = []
+    let lastIndex = 0
+
+    sortedMarks.forEach((mark, index) => {
+      const markIndex = group.text.indexOf(mark.text, lastIndex)
+      if (markIndex === -1) return
+
+      // 添加标记前的普通文本
+      if (markIndex > lastIndex) {
+        parts.push(
+          <span key={`text-${index}-before`}>
+            {group.text.substring(lastIndex, markIndex)}
+          </span>
+        )
+      }
+
+      // 添加高亮标记的文本
+      parts.push(
+        <span
+          key={`mark-${mark.id}`}
+          className="text-mark-highlight"
+          style={{
+            backgroundColor: `${mark.color}40`, // 40% 透明度
+            borderBottom: `2px solid ${mark.color}`,
+            padding: '0 2px',
+            borderRadius: '2px'
+          }}
+          data-mark-id={mark.id}
+        >
+          {mark.text}
+        </span>
+      )
+
+      lastIndex = markIndex + mark.text.length
+    })
+
+    // 添加剩余的普通文本
+    if (lastIndex < group.text.length) {
+      parts.push(
+        <span key="text-end">
+          {group.text.substring(lastIndex)}
+        </span>
+      )
+    }
+
+    return parts
+  }, [group.text, group.id, textMarks])
+
+  return (
+    <div
+      ref={shouldHighlight ? activeGroupRef : null}
+      className={`speaker-group ${shouldHighlight ? 'active' : ''} ${isSelected ? 'selected' : ''}`}
+      onClick={handleClick}
+    >
+      {/* 右上角标记按钮：仅 hover 时显示 */}
+      <div className="group-actions" onClick={(e) => e.stopPropagation()}>
+        <Tooltip title="标记为重点" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
+          <Button
+            type="text"
+            size="small"
+            className={`mark-btn mark-important ${markType === 'important' ? 'active' : ''}`}
+            icon={<PushpinOutlined />}
+            onClick={() => {
+              onMarkChange(group, 'important', previewText)
+            }}
+          />
+        </Tooltip>
+        <Tooltip title="标记为问题" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
+          <Button
+            type="text"
+            size="small"
+            className={`mark-btn mark-question ${markType === 'question' ? 'active' : ''}`}
+            icon={<QuestionCircleOutlined />}
+            onClick={() => {
+              onMarkChange(group, 'question', previewText)
+            }}
+          />
+        </Tooltip>
+        <Tooltip title="标记为待办" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
+          <Button
+            type="text"
+            size="small"
+            className={`mark-btn mark-todo ${markType === 'todo' ? 'active' : ''}`}
+            icon={<CheckCircleOutlined />}
+            onClick={() => {
+              onMarkChange(group, 'todo', previewText)
+            }}
+          />
+        </Tooltip>
+        <Tooltip title="取消标记" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
+          <Button
+            type="text"
+            size="small"
+            className="mark-btn mark-clear"
+            icon={<StopOutlined />}
+            onClick={() => {
+              onMarkChange(group, null, previewText)
+            }}
+          />
+        </Tooltip>
+      </div>
+
+      {/* 头部信息：时间戳和发言人 */}
+      <div className="group-header">
+        <Tag className="timestamp">
+          {formatTimeFromMs(group.startTime)}
+        </Tag>
+        <Tag className="speaker" color="blue">
+          发言人 {group.speakerId}
+        </Tag>
+      </div>
+
+      {/* 文本内容 */}
+      <Text
+        className={`group-text ${markedClassName}`}
+        onMouseUp={(e) => onTextMouseUp(group, e.currentTarget as unknown as HTMLElement)}
+        onMouseDown={onTextMouseDown}
+      >
+        {renderHighlightedText()}
+      </Text>
+    </div>
+  )
+}, (prev, next) => {
+  return prev.group === next.group &&
+    prev.shouldHighlight === next.shouldHighlight &&
+    prev.isSelected === next.isSelected &&
+    prev.markType === next.markType &&
+    prev.markedClassName === next.markedClassName &&
+    prev.previewText === next.previewText &&
+    prev.textMarks === next.textMarks
+})
+
 export default function TranscriptPanel({
   paragraphs,
   currentTime,
@@ -48,6 +249,17 @@ export default function TranscriptPanel({
     text: string
     anchorGroupId?: string
   }>({ visible: false, x: 0, y: 0, startTimeMs: 0, text: '', anchorGroupId: undefined })
+  
+  // 文本标记状态：存储选中文本的标记信息
+  const [textMarks, setTextMarks] = useState<Array<{
+    id: string
+    groupId: string
+    startTimeMs: number
+    endTimeMs: number
+    text: string
+    type: 'important' | 'question' | 'todo'
+    color: string
+  }>>([])
 
   const getScrollContainerEl = useCallback(() => {
     // antd Card 可滚动区域在 .ant-card-body
@@ -433,17 +645,38 @@ export default function TranscriptPanel({
                 const markId = `sel-${Math.round(selectionMenu.startTimeMs)}`
                 const preview = selectionMenu.text.length > 18 ? `${selectionMenu.text.slice(0, 18)}...` : selectionMenu.text
 
-                  const dispatchMark = (type: 'important' | 'question' | 'todo' | null) => {
-                    window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
-                      detail: { groupId: markId, type, timeMs: selectionMenu.startTimeMs, text: preview }
-                    }))
-                    if (type) {
-                      // 这里保持和之前一致：标记后把选区清掉，避免一直高亮影响阅读
-                      window.getSelection()?.removeAllRanges()
-                      selectionRangeRef.current = null
-                      setSelectionMenu(prev => ({ ...prev, visible: false }))
+                // 颜色配置
+                const markColors: Record<string, string> = {
+                  important: '#60a5fa', // 蓝色
+                  question: '#f472b6',  // 粉色
+                  todo: '#fbbf24'       // 黄色
+                }
+
+                const dispatchMark = (type: 'important' | 'question' | 'todo' | null) => {
+                  if (type && selectionMenu.anchorGroupId) {
+                    // 添加文本标记
+                    const newMark = {
+                      id: markId,
+                      groupId: selectionMenu.anchorGroupId,
+                      startTimeMs: selectionMenu.startTimeMs,
+                      endTimeMs: selectionMenu.startTimeMs + 5000, // 默认5秒时长
+                      text: selectionMenu.text,
+                      type: type,
+                      color: markColors[type]
                     }
+                    setTextMarks(prev => [...prev, newMark])
+                    
+                    // 触发事件通知其他组件（如进度条）
+                    window.dispatchEvent(new CustomEvent('textMarkAdded', {
+                      detail: newMark
+                    }))
+                    
+                    // 标记后把选区清掉
+                    window.getSelection()?.removeAllRanges()
+                    selectionRangeRef.current = null
+                    setSelectionMenu(prev => ({ ...prev, visible: false }))
                   }
+                }
 
                 return (
                   <>
@@ -535,6 +768,7 @@ export default function TranscriptPanel({
               onMarkChange={handleMarkChange}
               onTextMouseUp={handleTextMouseUp}
               onTextMouseDown={handleTextMouseDown}
+              textMarks={textMarks}
             />
           )
         })}
@@ -542,123 +776,3 @@ export default function TranscriptPanel({
     </Card>
   )
 }
-
-const SpeakerGroupItem = memo(function SpeakerGroupItem({
-  group,
-  shouldHighlight,
-  isSelected,
-  markType,
-  markedClassName,
-  previewText,
-  activeGroupRef,
-  onSelect,
-  onMarkChange,
-  onTextMouseUp,
-  onTextMouseDown
-}: {
-  group: SpeakerGroup
-  shouldHighlight: boolean
-  isSelected: boolean
-  markType: MarkType
-  markedClassName: string
-  previewText: string
-  activeGroupRef: React.RefObject<HTMLDivElement | null>
-  onSelect: (group: SpeakerGroup) => void
-  onMarkChange: (group: SpeakerGroup, type: MarkType, previewText: string) => void
-  onTextMouseUp: (group: SpeakerGroup, el: HTMLElement) => void
-  onTextMouseDown: () => void
-}) {
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    // 检查是否有文本被选中
-    const selection = window.getSelection()
-    const selectedText = selection?.toString().trim() || ''
-    
-    // 如果有选中的文本，不触发整段选中
-    if (selectedText.length > 0) {
-      return
-    }
-    onSelect(group)
-  }, [group, onSelect])
-
-  return (
-    <div
-      ref={shouldHighlight ? activeGroupRef : null}
-      className={`speaker-group ${shouldHighlight ? 'active' : ''} ${isSelected ? 'selected' : ''}`}
-      onClick={handleClick}
-    >
-      {/* 右上角标记按钮：仅 hover 时显示 */}
-      <div className="group-actions" onClick={(e) => e.stopPropagation()}>
-        <Tooltip title="标记为重点" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
-          <Button
-            type="text"
-            size="small"
-            className={`mark-btn mark-important ${markType === 'important' ? 'active' : ''}`}
-            icon={<PushpinOutlined />}
-            onClick={() => {
-              onMarkChange(group, 'important', previewText)
-            }}
-          />
-        </Tooltip>
-        <Tooltip title="标记为问题" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
-          <Button
-            type="text"
-            size="small"
-            className={`mark-btn mark-question ${markType === 'question' ? 'active' : ''}`}
-            icon={<QuestionCircleOutlined />}
-            onClick={() => {
-              onMarkChange(group, 'question', previewText)
-            }}
-          />
-        </Tooltip>
-        <Tooltip title="标记为待办" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
-          <Button
-            type="text"
-            size="small"
-            className={`mark-btn mark-todo ${markType === 'todo' ? 'active' : ''}`}
-            icon={<CheckCircleOutlined />}
-            onClick={() => {
-              onMarkChange(group, 'todo', previewText)
-            }}
-          />
-        </Tooltip>
-        <Tooltip title="取消标记" placement="top" classNames={{ root: 'mark-tooltip-overlay' }}>
-          <Button
-            type="text"
-            size="small"
-            className="mark-btn mark-clear"
-            icon={<StopOutlined />}
-            onClick={() => {
-              onMarkChange(group, null, previewText)
-            }}
-          />
-        </Tooltip>
-      </div>
-
-      {/* 头部信息：时间戳和发言人 */}
-      <div className="group-header">
-        <Tag className="timestamp">
-          {formatTimeFromMs(group.startTime)}
-        </Tag>
-        <Tag className="speaker" color="blue">
-          发言人 {group.speakerId}
-        </Tag>
-      </div>
-
-      {/* 文本内容 */}
-      <Text
-        className={`group-text ${markedClassName}`}
-        onMouseUp={(e) => onTextMouseUp(group, e.currentTarget as unknown as HTMLElement)}
-        onMouseDown={onTextMouseDown}
-      >
-        {group.text}
-      </Text>
-    </div>
-  )
-}, (prev, next) => {
-  return prev.group === next.group &&
-    prev.shouldHighlight === next.shouldHighlight &&
-    prev.isSelected === next.isSelected &&
-    prev.markType === next.markType &&
-    prev.markedClassName === next.markedClassName &&
-    prev.previewText === next.previewText
-})

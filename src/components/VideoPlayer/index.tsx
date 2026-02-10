@@ -465,7 +465,44 @@ export default function VideoPlayer({
     return () => window.removeEventListener('transcriptMarkChange', handleTranscriptMarkChange)
   }, [])
 
-  // 监听“从某个时间点开始播放”（来自转写文本选中菜单）
+  // 监听选中文本的标记事件，在进度条上增加对应标记 UI
+  useEffect(() => {
+    const handleTextMarkAdded = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        id: string
+        groupId: string
+        startTimeMs: number
+        endTimeMs: number
+        text: string
+        type: 'important' | 'question' | 'todo'
+        color: string
+      }>).detail
+
+      if (!detail?.id) return
+
+      // 将文本标记转换为进度条标记
+      const newMark: TranscriptMark = {
+        groupId: detail.id, // 使用标记的 id 作为唯一标识
+        type: detail.type,
+        timeMs: detail.startTimeMs,
+        text: detail.text
+      }
+
+      setTranscriptMarks(prev => {
+        // 检查是否已存在相同 id 的标记
+        const existedIndex = prev.findIndex(m => m.groupId === detail.id)
+        if (existedIndex === -1) return [...prev, newMark]
+        const next = [...prev]
+        next[existedIndex] = newMark
+        return next
+      })
+    }
+
+    window.addEventListener('textMarkAdded', handleTextMarkAdded)
+    return () => window.removeEventListener('textMarkAdded', handleTextMarkAdded)
+  }, [])
+
+  // 监听"从某个时间点开始播放"（来自转写文本选中菜单）
   useEffect(() => {
     const handlePlayFromTime = (event: Event) => {
       const detail = (event as CustomEvent<{ timeMs: number }>).detail

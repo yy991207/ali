@@ -500,15 +500,15 @@
 }
 
 .user-mark-important {
-  background: #74d2ff;
+  background: #60a5fa;
 }
 
 .user-mark-question {
-  background: #ff7db8;
+  background: #f472b6;
 }
 
 .user-mark-todo {
-  background: #ffd24a;
+  background: #fbbf24;
 }
 
 /* 进度条悬停层：覆盖滑轨区域，用于触发章节浮窗 */
