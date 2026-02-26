@@ -1,4 +1,24 @@
 /* 基础样式 */
+:root {
+  --bg-base: #eef4f4;
+  --bg-accent: #dce9e8;
+  --bg-surface: #ffffff;
+  --bg-soft: #f5f9f9;
+  --line-default: #d7e2e2;
+  --line-strong: #b9cdcc;
+  --text-main: #162526;
+  --text-subtle: #536b6c;
+  --text-light: #7f9494;
+  --brand-700: #0c5d56;
+  --brand-600: #0e6a61;
+  --brand-500: #138276;
+  --brand-200: #d6f0ec;
+  --brand-100: #eaf8f5;
+  --warning-500: #f59e0b;
+  --danger-500: #ef4444;
+  --surface-shadow: 0 10px 30px rgba(17, 40, 41, 0.08);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -6,9 +26,11 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
-  background-color: #f5f5f5;
-  color: #262626;
+  font-family: 'Avenir Next', 'SF Pro Display', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', sans-serif;
+  background: radial-gradient(circle at 5% 5%, var(--bg-accent), transparent 45%),
+    radial-gradient(circle at 90% 0%, #ecf5f5, transparent 40%),
+    var(--bg-base);
+  color: var(--text-main);
 }
 
 #root {
@@ -17,26 +39,25 @@ body {
 
 /* 滚动条样式 */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
+  background: #b7c8c8;
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: #8ca6a6;
 }
 
 /* 选中文字样式 */
 ::selection {
-  background-color: #605ce5;
-  color: white;
+  background-color: rgba(19, 130, 118, 0.22);
+  color: var(--text-main);
 }

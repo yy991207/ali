@@ -67,7 +67,7 @@ const SpeakerGroupItem = memo(function SpeakerGroupItem({
   onTextMouseDown,
   textMarks
 }: SpeakerGroupItemProps) {
-  const handleClick = useCallback((e: React.MouseEvent) => {
+  const handleClick = useCallback(() => {
     // 检查是否有文本被选中
     const selection = window.getSelection()
     const selectedText = selection?.toString().trim() || ''
@@ -799,8 +799,6 @@ export default function TranscriptPanel({
             <div className="selection-menu-mark-actions">
               {(() => {
                 const markId = `sel-${Math.round(selectionMenu.startTimeMs)}`
-                const preview = selectionMenu.text.length > 18 ? `${selectionMenu.text.slice(0, 18)}...` : selectionMenu.text
-
                 // 颜色配置
                 const markColors: Record<string, string> = {
                   important: '#60a5fa', // 蓝色

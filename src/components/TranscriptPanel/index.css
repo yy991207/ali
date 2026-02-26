@@ -5,30 +5,36 @@
   flex-direction: column;
 }
 
+.transcript-panel :global(.ant-card) {
+  border-radius: 16px;
+  border: 1px solid var(--line-default);
+  box-shadow: var(--surface-shadow);
+}
+
 .transcript-panel :global(.ant-card-body) {
   flex: 1;
   overflow: auto;
   padding: 16px;
   position: relative;
+  background: var(--bg-surface);
 }
 
 .transcript-content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
-/* 选中文本后的操作浮窗 */
 .selection-menu {
   position: absolute;
   z-index: 1200;
   transform: translateX(-50%);
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
-  border: 1px solid #f0f0f0;
+  background: var(--bg-surface);
+  border-radius: 14px;
+  box-shadow: 0 16px 36px rgba(17, 40, 41, 0.2);
+  border: 1px solid var(--line-default);
   padding: 8px 10px;
-  min-width: 160px;
+  min-width: 168px;
 }
 
 .selection-menu-row {
@@ -40,7 +46,7 @@
 }
 
 .selection-menu-row + .selection-menu-row {
-  border-top: 1px solid #f2f2f2;
+  border-top: 1px solid var(--line-default);
 }
 
 .selection-menu-row-icon {
@@ -50,8 +56,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
-  color: #4a3f8c;
+  background: var(--brand-100);
+  color: var(--brand-700);
   flex-shrink: 0;
 }
 
@@ -60,18 +66,18 @@
   height: auto !important;
   font-size: 14px !important;
   font-weight: 600;
-  color: #1f2340 !important;
+  color: var(--text-main) !important;
 }
 
 .selection-menu-row-btn:hover {
-  color: #605ce5 !important;
+  color: var(--brand-600) !important;
   background: transparent !important;
 }
 
 .selection-menu-row-label {
   font-size: 14px;
   font-weight: 600;
-  color: #1f2340;
+  color: var(--text-main);
   white-space: nowrap;
 }
 
@@ -82,44 +88,35 @@
   gap: 6px;
 }
 
-/* 发言人组样式 */
 .speaker-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 16px;
-  border-radius: 8px;
+  padding: 14px 16px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  background: #fff;
-  border: 1px solid #f0f0f0;
+  transition: all 0.22s ease;
+  background: var(--bg-surface);
+  border: 1px solid var(--line-default);
   position: relative;
 }
 
 .speaker-group:hover {
-  background: #fff;
-  border-color: rgba(96, 92, 229, 0.55);
+  border-color: rgba(19, 130, 118, 0.4);
+  box-shadow: 0 8px 24px rgba(19, 130, 118, 0.12);
 }
 
 .speaker-group.active {
-  background: #f0f0ff;
-  border-left: 3px solid #605ce5;
+  background: var(--brand-100);
+  border-left: 4px solid var(--brand-500);
 }
 
-.speaker-group:hover {
-  border: 2px solid rgba(96, 92, 229, 0.55);
-  box-shadow: 0 2px 10px rgba(96, 92, 229, 0.10);
-}
-
-/* 点击选中态：只允许一个对象存在 */
 .speaker-group.selected {
-  background: #605ce5;
-  border: 2px solid #605ce5;
-  box-shadow: 0 6px 16px rgba(96, 92, 229, 0.30);
+  background: #e4f4f1;
+  border: 1px solid var(--brand-500);
+  box-shadow: 0 12px 24px rgba(19, 130, 118, 0.2);
 }
 
-
-/* 右上角标记按钮组 */
 .group-actions {
   position: absolute;
   right: 12px;
@@ -152,46 +149,44 @@
 }
 
 .mark-important {
-  background: #60a5fa !important;
+  background: #3b82f6 !important;
   color: #fff !important;
 }
 
 .mark-question {
-  background: #f472b6 !important;
+  background: #ec4899 !important;
   color: #fff !important;
 }
 
 .mark-todo {
-  background: #fbbf24 !important;
+  background: var(--warning-500) !important;
   color: #fff !important;
 }
 
 .mark-clear {
-  background: #d9d9d9 !important;
+  background: #9ca3af !important;
   color: #fff !important;
 }
 
 .mark-btn.active {
-  box-shadow: 0 0 0 2px rgba(34, 34, 34, 0.10);
+  box-shadow: 0 0 0 2px rgba(17, 40, 41, 0.12);
   filter: saturate(1.05);
 }
 
-/* 标记 Tooltip（图2-图5 形态） */
 :global(.mark-tooltip-overlay .ant-tooltip-inner) {
-  background: #1f2340;
+  background: var(--text-main);
   color: #fff;
   font-size: 14px;
   font-weight: 600;
   padding: 10px 14px;
   border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
 :global(.mark-tooltip-overlay .ant-tooltip-arrow::before) {
-  background: #1f2340;
+  background: var(--text-main);
 }
 
-/* 组头部信息 */
 .group-header {
   display: flex;
   align-items: center;
@@ -201,44 +196,43 @@
 
 .timestamp {
   font-size: 12px;
-  color: #8c8c8c;
-  background: #f5f5f5;
-  border: none;
+  color: var(--text-light);
+  background: var(--bg-soft);
+  border: 1px solid var(--line-default);
   padding: 2px 8px;
+  border-radius: 999px;
 }
 
 .speaker {
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
-/* 组文本内容 */
 .group-text {
   font-size: 14px;
   line-height: 1.8;
-  color: #262626;
+  color: var(--text-main);
   margin-left: 0;
   text-indent: 0;
 }
 
-/* 文本标记背景（与右上角按钮颜色保持一致） */
 .group-text.marked-important,
 .text-mark-highlight.marked-important {
-  background: rgba(96, 165, 250, 0.35);
+  background: rgba(59, 130, 246, 0.28);
   border-radius: 6px;
   padding: 2px 4px;
 }
 
 .group-text.marked-question,
 .text-mark-highlight.marked-question {
-  background: rgba(244, 114, 182, 0.30);
+  background: rgba(236, 72, 153, 0.24);
   border-radius: 6px;
   padding: 2px 4px;
 }
 
 .group-text.marked-todo,
 .text-mark-highlight.marked-todo {
-  background: rgba(251, 191, 36, 0.30);
+  background: rgba(245, 158, 11, 0.25);
   border-radius: 6px;
   padding: 2px 4px;
 }
@@ -246,4 +240,21 @@
 .text-mark-highlight {
   border-radius: 6px;
   padding: 2px 4px;
+}
+
+@media (max-width: 768px) {
+  .transcript-panel :global(.ant-card-body) {
+    padding: 12px;
+  }
+
+  .speaker-group {
+    padding: 12px;
+  }
+
+  .group-actions {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+    gap: 6px;
+  }
 }

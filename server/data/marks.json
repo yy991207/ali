@@ -27,6 +27,33 @@
       "text": "亚非拉尤其是亚非拉地区的",
       "type": "todo",
       "color": "#fbbf24"
+    },
+    {
+      "id": "sel-5480",
+      "groupId": "group-10",
+      "startTimeMs": 5480.0,
+      "endTimeMs": 10480.0,
+      "text": "学们上课",
+      "type": "important",
+      "color": "#60a5fa"
+    },
+    {
+      "id": "sel-27861",
+      "groupId": "group-180",
+      "startTimeMs": 27861.0,
+      "endTimeMs": 32861.0,
+      "text": "本主义国家在19世",
+      "type": "question",
+      "color": "#f472b6"
+    },
+    {
+      "id": "sel-106454",
+      "groupId": "group-1890",
+      "startTimeMs": 106454.0,
+      "endTimeMs": 111454.0,
+      "text": "个词汇，一个",
+      "type": "todo",
+      "color": "#fbbf24"
     }
   ]
 }

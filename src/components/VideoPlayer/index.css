@@ -1,6 +1,8 @@
 .video-player {
   background: #000;
-  border-radius: 8px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
   overflow: hidden;
   position: relative;
 }
@@ -25,13 +27,14 @@
   left: 0;
   right: 0;
   height: 64px;
-  background: #fff;
-  border-top: 1px solid #e8e8e8;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--line-default);
   display: flex;
   align-items: center;
   padding: 0 24px;
   z-index: 1000;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 -8px 26px rgba(17, 40, 41, 0.14);
 }
 
 .mini-time-display {
@@ -50,7 +53,7 @@
 }
 
 .mini-play-btn {
-  color: #605ce5 !important;
+  color: var(--brand-500) !important;
   font-size: 28px !important;
   padding: 0 !important;
   height: 36px !important;
@@ -61,7 +64,7 @@
 }
 
 .mini-play-btn:hover {
-  color: #4a3f8c !important;
+  color: var(--brand-700) !important;
 }
 
 .mini-control-btn {
@@ -76,7 +79,7 @@
 }
 
 .mini-control-btn:hover {
-  color: #605ce5 !important;
+  color: var(--brand-500) !important;
 }
 
 .mini-progress-container {
@@ -133,7 +136,7 @@
   top: 50%;
   transform: translateY(-50%);
   height: 4px;
-  background: rgba(180, 176, 255, 0.55);
+  background: rgba(19, 130, 118, 0.26);
   border-radius: 2px;
   pointer-events: auto;
   cursor: pointer;
@@ -141,19 +144,19 @@
 }
 
 .mini-segment-mark:hover {
-  background: rgba(96, 92, 229, 0.85);
+  background: rgba(19, 130, 118, 0.72);
 }
 
 .mini-segment-mark.unplayed {
-  background: rgba(180, 176, 255, 0.55);
+  background: rgba(19, 130, 118, 0.26);
 }
 
 .mini-segment-mark.played {
-  background: rgba(96, 92, 229, 0.9);
+  background: rgba(19, 130, 118, 0.78);
 }
 
 .mini-segment-mark.active {
-  background: #605ce5;
+  background: var(--brand-500);
 }
 
 .mini-progress-slider {
@@ -164,16 +167,16 @@
 }
 
 .mini-progress-slider .ant-slider-rail {
-  background: rgba(180, 176, 255, 0.55) !important;
+  background: rgba(19, 130, 118, 0.26) !important;
 }
 
 .mini-progress-slider .ant-slider-track {
-  background: #605ce5 !important;
+  background: var(--brand-500) !important;
 }
 
 .mini-progress-slider .ant-slider-handle {
-  border-color: #605ce5 !important;
-  background: #605ce5 !important;
+  border-color: var(--brand-500) !important;
+  background: var(--brand-500) !important;
   width: 12px !important;
   height: 12px !important;
   margin-top: 0 !important;
@@ -205,7 +208,7 @@
 }
 
 .mini-rate-btn:hover {
-  color: #605ce5 !important;
+  color: var(--brand-500) !important;
 }
 
 .mini-total-time {
@@ -225,7 +228,7 @@
 }
 
 .mini-expand-btn:hover {
-  color: #605ce5 !important;
+  color: var(--brand-500) !important;
 }
 
 /* 顶部工具栏 */
@@ -234,10 +237,10 @@
   justify-content: flex-end;
   align-items: center;
   padding: 10px 14px;
-  background: #fff;
-  border: 1px solid #f0f0f0;
-  border-radius: 12px;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--line-default);
+  border-radius: 14px;
+  box-shadow: 0 12px 24px rgba(17, 40, 41, 0.1);
 }
 
 .toolbar-right {
@@ -260,18 +263,18 @@
 }
 
 .toolbar-btn:hover {
-  color: #605ce5 !important;
-  background: #f0f0ff !important;
+  color: var(--brand-500) !important;
+  background: var(--brand-100) !important;
 }
 
 .collapse-btn {
-  background: #605ce5 !important;
+  background: var(--brand-500) !important;
   color: #fff !important;
   border-radius: 6px !important;
 }
 
 .collapse-btn:hover {
-  background: #4a3f8c !important;
+  background: var(--brand-700) !important;
   color: #fff !important;
 }
 
@@ -282,7 +285,7 @@
   padding: 0 !important;
   min-width: 200px;
   max-height: 320px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 12px 28px rgba(17, 40, 41, 0.18) !important;
 }
 
 .filter-popover-overlay .ant-popover-arrow {
@@ -326,8 +329,8 @@
 }
 
 .filter-checkbox .ant-checkbox-checked .ant-checkbox-inner {
-  background-color: #605ce5;
-  border-color: #605ce5;
+  background-color: var(--brand-500);
+  border-color: var(--brand-500);
 }
 
 .filter-label {
@@ -430,8 +433,8 @@
 }
 
 .speaker-checkbox .ant-checkbox-checked .ant-checkbox-inner {
-  background-color: #605ce5;
-  border-color: #605ce5;
+  background-color: var(--brand-500);
+  border-color: var(--brand-500);
 }
 
 .speaker-avatar {
@@ -569,7 +572,7 @@
 .segment-mark {
   position: absolute;
   height: 100%;
-  background: rgba(180, 176, 255, 0.55);
+  background: rgba(19, 130, 118, 0.26);
   border-radius: 2px;
   cursor: pointer;
   pointer-events: auto;
@@ -578,22 +581,22 @@
 }
 
 .segment-mark.unplayed {
-  background: rgba(180, 176, 255, 0.55);
+  background: rgba(19, 130, 118, 0.26);
 }
 
 .segment-mark.played {
-  background: rgba(96, 92, 229, 0.9);
+  background: rgba(19, 130, 118, 0.78);
 }
 
 .segment-mark:hover,
 .segment-mark.hovered {
-  background: rgba(96, 92, 229, 0.95);
+  background: rgba(19, 130, 118, 0.9);
   height: 8px;
   top: -2px;
 }
 
 .segment-mark.active {
-  background: #605ce5;
+  background: var(--brand-500);
   height: 8px;
   top: -2px;
 }
@@ -618,18 +621,18 @@
 }
 
 .progress-slider :global(.ant-slider-rail) {
-  background: rgba(180, 176, 255, 0.35);
+  background: rgba(19, 130, 118, 0.2);
   height: 4px;
 }
 
 .progress-slider :global(.ant-slider-track) {
-  background: #605ce5;
+  background: var(--brand-500);
   height: 4px;
 }
 
 .progress-slider :global(.ant-slider-handle) {
-  border-color: #605ce5;
-  background: #605ce5;
+  border-color: var(--brand-500);
+  background: var(--brand-500);
   width: 12px;
   height: 12px;
   margin-top: 0;
@@ -686,7 +689,7 @@
 }
 
 .play-btn:hover {
-  color: #605ce5 !important;
+  color: var(--brand-500) !important;
 }
 
 .function-controls {
@@ -709,7 +712,7 @@
 }
 
 .control-btn.active {
-  color: #605ce5 !important;
+  color: var(--brand-500) !important;
 }
 
 /* 音量控制 */
@@ -724,7 +727,7 @@
 }
 
 .volume-slider :global(.ant-slider-track) {
-  background: #605ce5;
+  background: var(--brand-500);
 }
 
 /* Ant Design 按钮样式覆盖 */
@@ -741,14 +744,14 @@
 .segment-popover {
   max-width: 280px;
   padding: 8px 10px;
-  background: #f0f0ff;
+  background: #eef8f6;
   border-radius: 6px;
 }
 
 .popover-time {
   font-size: 12px;
   font-weight: 500;
-  color: #605ce5;
+  color: var(--brand-500);
   margin-bottom: 4px;
   font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
@@ -756,7 +759,7 @@
 .popover-title {
   font-size: 13px;
   font-weight: 600;
-  color: #4a3f8c;
+  color: var(--brand-700);
   margin-bottom: 4px;
   line-height: 1.4;
   font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
@@ -773,12 +776,12 @@
 :global(.segment-popover-overlay .ant-popover-inner) {
   padding: 0;
   border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(96, 92, 229, 0.2);
-  background: #f0f0ff;
+  box-shadow: 0 8px 20px rgba(19, 130, 118, 0.22);
+  background: #eef8f6;
 }
 
 :global(.segment-popover-overlay .ant-popover-arrow) {
-  background: #f0f0ff;
+  background: #eef8f6;
 }
 
 /* 倍速下拉菜单 - 黑底白字 */
@@ -805,7 +808,7 @@
 }
 
 .rate-dropdown-menu .ant-dropdown-menu-item-selected {
-  background: #605ce5 !important;
+  background: var(--brand-500) !important;
   color: #fff !important;
 }
 
@@ -850,7 +853,7 @@
 }
 
 .setting-switch.active {
-  background: #605ce5;
+  background: var(--brand-500);
 }
 
 .switch-thumb {
@@ -899,16 +902,76 @@
 }
 
 .color-option.selected .color-dot.dark {
-  border-color: #605ce5;
-  box-shadow: 0 0 0 2px #605ce5;
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 2px var(--brand-500);
 }
 
 .color-option.selected .color-dot.light {
-  border-color: #605ce5;
-  box-shadow: 0 0 0 2px #605ce5;
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 2px var(--brand-500);
 }
 
 .color-label {
   color: #fff;
   font-size: 13px;
+}
+
+@media (max-width: 1024px) {
+  .player-toolbar {
+    padding: 8px 10px;
+  }
+
+  .video-container {
+    max-width: 100%;
+  }
+
+  .mini-player-bar {
+    padding: 0 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .video-player {
+    border-radius: 12px;
+  }
+
+  .player-toolbar {
+    border-radius: 10px;
+    justify-content: space-between;
+  }
+
+  .toolbar-right {
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .toolbar-btn {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .mini-player-bar {
+    height: auto;
+    min-height: 74px;
+    padding: 10px 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .mini-time-display {
+    min-width: 52px;
+    font-size: 12px;
+  }
+
+  .mini-controls-center {
+    order: 3;
+    width: 100%;
+    margin: 0;
+  }
+
+  .mini-controls-right {
+    min-width: auto;
+    gap: 8px;
+  }
 }

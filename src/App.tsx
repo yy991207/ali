@@ -267,7 +267,10 @@ function App() {
     <Layout className={`app-layout ${isNotePanelOpen ? 'with-note-panel' : ''}`}>
       {/* 顶部标题栏 */}
       <header className="app-header">
-        <h1 className="app-title">{transResult.data.tag.showName}</h1>
+        <div className="app-title-block">
+          <h1 className="app-title">{transResult.data.tag.showName}</h1>
+          <p className="app-subtitle">智能转写与会议要点工作台</p>
+        </div>
         {/* VideoPlayer 顶部工具栏挂载点：和标题在同一个容器内 */}
         <div id="app-header-toolbar" className="app-header-toolbar" />
       </header>

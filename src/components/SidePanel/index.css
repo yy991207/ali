@@ -50,7 +50,7 @@
 }
 
 .agenda-item.active {
-  background: #f0f0ff;
+  background: var(--brand-100);
 }
 
 .agenda-header {
@@ -67,7 +67,7 @@
 }
 
 .agenda-item.active .agenda-title {
-  color: #605ce5;
+  color: var(--brand-600);
 }
 
 .agenda-time {

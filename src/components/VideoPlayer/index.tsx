@@ -137,7 +137,9 @@ export default function VideoPlayer({
               className={`filter-mark-btn blue ${markFilter.markTypes.includes('important') ? 'active' : ''}`}
               onClick={() => {
                 const hasType = markFilter.markTypes.includes('important')
-                const next = hasType ? markFilter.markTypes.filter(t => t !== 'important') : [...markFilter.markTypes, 'important']
+                const next: TranscriptMarkType[] = hasType
+                  ? markFilter.markTypes.filter((t): t is TranscriptMarkType => t !== 'important')
+                  : [...markFilter.markTypes, 'important']
                 onMarkFilterChange({ ...markFilter, showMarkedOnly: true, markTypes: next })
               }}
             >
@@ -148,7 +150,9 @@ export default function VideoPlayer({
               className={`filter-mark-btn pink ${markFilter.markTypes.includes('question') ? 'active' : ''}`}
               onClick={() => {
                 const hasType = markFilter.markTypes.includes('question')
-                const next = hasType ? markFilter.markTypes.filter(t => t !== 'question') : [...markFilter.markTypes, 'question']
+                const next: TranscriptMarkType[] = hasType
+                  ? markFilter.markTypes.filter((t): t is TranscriptMarkType => t !== 'question')
+                  : [...markFilter.markTypes, 'question']
                 onMarkFilterChange({ ...markFilter, showMarkedOnly: true, markTypes: next })
               }}
             >
@@ -159,7 +163,9 @@ export default function VideoPlayer({
               className={`filter-mark-btn yellow ${markFilter.markTypes.includes('todo') ? 'active' : ''}`}
               onClick={() => {
                 const hasType = markFilter.markTypes.includes('todo')
-                const next = hasType ? markFilter.markTypes.filter(t => t !== 'todo') : [...markFilter.markTypes, 'todo']
+                const next: TranscriptMarkType[] = hasType
+                  ? markFilter.markTypes.filter((t): t is TranscriptMarkType => t !== 'todo')
+                  : [...markFilter.markTypes, 'todo']
                 onMarkFilterChange({ ...markFilter, showMarkedOnly: true, markTypes: next })
               }}
             >

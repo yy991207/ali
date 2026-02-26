@@ -1,6 +1,10 @@
 # 视频转写智能分析平台 (Video Transcript Viewer)
 
 <p align="center">
+  <img src="img/home.png" alt="Video Transcript Viewer" width="800">
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/React-19.0.0-61DAFB?logo=react" alt="React">
   <img src="https://img.shields.io/badge/TypeScript-5.7.3-3178C6?logo=typescript" alt="TypeScript">
   <img src="https://img.shields.io/badge/Ant%20Design-5.24.0-1677FF?logo=antdesign" alt="Ant Design">
