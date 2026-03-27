@@ -48,6 +48,82 @@ const filterTranscriptBySpeakers = (transcript: ParsedTranscript, speakerIds: nu
   }
 }
 
+const isMeaningfulAgendaItem = (item: AgendaItem | undefined): boolean => (
+  !!item && (
+    typeof item.title === 'string'
+    || typeof item.value === 'string'
+    || Number.isFinite(item.time)
+    || Number.isFinite(item.endTime)
+    || typeof item.summary === 'string'
+  )
+)
+
+const getAgendaItemsFromLab = (lab?: LabInfo): AgendaItem[] => {
+  const rawValues = lab?.contents?.[0]?.contentValues
+  if (!Array.isArray(rawValues)) {
+    return []
+  }
+  return (rawValues as AgendaItem[]).filter(isMeaningfulAgendaItem)
+}
+
+const hasAgendaTiming = (items: AgendaItem[]): boolean => (
+  items.some(item => Number.isFinite(item.time) || Number.isFinite(item.endTime))
+)
+
+const buildAgendaSummaryText = (item: AgendaItem | undefined, title: string): string => {
+  if (!item) return ''
+  if (item.summary) return item.summary
+  // 章节类卡片里常见结构是 title 放标题、value 放摘要；只有当 value 和标题不同才当作摘要。
+  if (item.value && item.value !== title) {
+    return item.value
+  }
+  return ''
+}
+
+const buildUnifiedAgendaItems = (findLabCardByKey: (keys: string[]) => LabInfo | undefined): AgendaItem[] => {
+  const realtimeSummaryItems = getAgendaItemsFromLab(findLabCardByKey(['labRealtimeSummaryInfo']))
+  const agendaSummaryItems = getAgendaItemsFromLab(findLabCardByKey(['agendaSummary']))
+  const pptTitleItems = getAgendaItemsFromLab(findLabCardByKey(['pptTitle']))
+
+  // “章节速览”优先用实时章节卡片；如果没有，再退回原来的章节摘要卡片。
+  const overviewSourceItems = realtimeSummaryItems.length > 0
+    ? realtimeSummaryItems
+    : agendaSummaryItems.length > 0
+      ? agendaSummaryItems
+      : pptTitleItems
+
+  // 进度条分段必须有时间，所以这里优先拿带时间的数据源；没有的话再跟着章节速览当前来源走。
+  const timelineSourceItems = hasAgendaTiming(overviewSourceItems)
+    ? overviewSourceItems
+    : pptTitleItems.length > 0
+      ? pptTitleItems
+      : overviewSourceItems
+
+  const totalItems = Math.max(overviewSourceItems.length, timelineSourceItems.length)
+
+  return Array.from({ length: totalItems }, (_, index) => {
+    const overviewItem = overviewSourceItems[index]
+    const timelineItem = timelineSourceItems[index]
+    const title = overviewItem?.title
+      || timelineItem?.title
+      || overviewItem?.value
+      || timelineItem?.value
+      || `章节 ${index + 1}`
+
+    return {
+      ...(timelineItem || {}),
+      ...(overviewItem || {}),
+      id: overviewItem?.id ?? timelineItem?.id ?? index + 1,
+      title,
+      value: title,
+      summary: buildAgendaSummaryText(overviewItem, title) || buildAgendaSummaryText(timelineItem, title),
+      time: overviewItem?.time ?? timelineItem?.time,
+      endTime: overviewItem?.endTime ?? timelineItem?.endTime,
+      extensions: overviewItem?.extensions ?? timelineItem?.extensions
+    }
+  })
+}
+
 function App() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -119,41 +195,10 @@ function App() {
     }
   }, [])
 
-  // 提取议程数据（合并 pptTitle 的时间数据和 agendaSummary 的摘要数据）
+  // 章节速览和播放器分段统一走同一份章节数据，避免两边各自取不同卡片造成不一致。
   const agendaItems = useMemo(() => {
     if (!labInfo) return []
-
-    // 从 pptTitle 获取带时间戳的章节数据
-    const pptTitleLab = findLabCardByKey(['pptTitle'])
-    const timeItems = pptTitleLab?.contents[0]?.contentValues as AgendaItem[] || []
-
-    // 从 agendaSummary 获取带摘要的章节数据
-    const agendaLab = findLabCardByKey(['agendaSummary'])
-    const summaryItems = agendaLab?.contents[0]?.contentValues as AgendaItem[] || []
-
-    // 真实接口有时只返回 agendaSummary，没有 pptTitle。
-    // 这种情况下也要把摘要内容渲染出来，方便确认接口数据已接到页面。
-    if (timeItems.length > 0) {
-      return timeItems.map((timeItem, index) => {
-        const title = timeItem.title || timeItem.value || `章节 ${index + 1}`
-        return {
-          ...timeItem,
-          title,
-          value: title,
-          summary: summaryItems[index]?.value || ''
-        }
-      })
-    }
-
-    return summaryItems.map((summaryItem, index) => {
-      const title = summaryItem.title || summaryItem.value || `章节 ${index + 1}`
-      return {
-        ...summaryItem,
-        title,
-        value: title,
-        summary: summaryItem.value || ''
-      }
-    })
+    return buildUnifiedAgendaItems(findLabCardByKey)
   }, [findLabCardByKey, labInfo])
 
   // 全文概要优先读取真实接口的 fullSummary 卡片，没有时再退回章节摘要拼接

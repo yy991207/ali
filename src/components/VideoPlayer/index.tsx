@@ -77,6 +77,31 @@ const getAgendaDurationFallback = (items: AgendaItem[]): number => (
   }, 0)
 )
 
+const normalizeDurationSeconds = (rawDuration: number, fallbackDurationMs: number): number => {
+  if (!(rawDuration > 0)) {
+    return 0
+  }
+
+  const fallbackDurationSec = fallbackDurationMs > 0 ? fallbackDurationMs / 1000 : 0
+  if (fallbackDurationSec > 0) {
+    const distanceAsSeconds = Math.abs(rawDuration - fallbackDurationSec)
+    const durationFromMs = rawDuration / 1000
+    const distanceAsMilliseconds = Math.abs(durationFromMs - fallbackDurationSec)
+
+    // 真实接口里 duration 有时是秒，有时又像毫秒，这里选更接近章节时间轴的一侧。
+    if (distanceAsMilliseconds < distanceAsSeconds) {
+      return durationFromMs
+    }
+  }
+
+  // 没有章节时间可参考时，补一个简单兜底，避免把几百万毫秒直接当几百万秒展示。
+  if (rawDuration > 24 * 60 * 60) {
+    return rawDuration / 1000
+  }
+
+  return rawDuration
+}
+
 const buildTimedAgendaItems = (items: AgendaItem[], totalDurationSec: number): AgendaItem[] => {
   const sortedItems = items
     .filter(item => isValidTimeValue(item.time))
@@ -148,14 +173,18 @@ export default function VideoPlayer({
 
   const SEGMENT_GAP_PX = 6
 
-  // 当前真实接口里 duration 可能还是 0，这里优先用接口总时长，没有时再用章节分段的结束时间兜底。
+  const fallbackDurationMs = useMemo(() => (
+    getAgendaDurationFallback(agendaItems)
+  ), [agendaItems])
+
+  // 当前真实接口里 duration 可能为 0，也可能单位不稳定，这里先和章节时间轴对齐后再决定用哪份总时长。
   const effectiveDuration = useMemo(() => {
-    if (duration > 0) {
-      return duration
+    const normalizedDuration = normalizeDurationSeconds(duration, fallbackDurationMs)
+    if (normalizedDuration > 0) {
+      return normalizedDuration
     }
-    const fallbackDurationMs = getAgendaDurationFallback(agendaItems)
     return fallbackDurationMs > 0 ? fallbackDurationMs / 1000 : 0
-  }, [agendaItems, duration])
+  }, [duration, fallbackDurationMs])
 
   const timedAgendaItems = useMemo(() => (
     buildTimedAgendaItems(agendaItems, effectiveDuration)
