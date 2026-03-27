@@ -8,7 +8,7 @@ package-lock.json
 # Build output
 dist/
 build/
-
+interface/
 # IDE
 .vscode/
 .idea/

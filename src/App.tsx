@@ -4,8 +4,9 @@ import VideoPlayer from './components/VideoPlayer'
 import TranscriptPanel from './components/TranscriptPanel'
 import SmartOverview from './components/SmartOverview'
 import NotePanel from './components/NotePanel'
-import { LabInfoResponse, TransResultResponse, ParsedTranscript, AgendaItem, KeywordItem, RoleSummaryItem } from './types'
+import { LabInfoResponse, TransResultResponse, ParsedTranscript, AgendaItem, KeywordItem, RoleSummaryItem, QAPair, LabInfo } from './types'
 import { formatTimeFromMs } from './utils/time'
+import { viewerApiService } from './services/viewerApi'
 import './App.css'
 
 // 笔记项接口
@@ -28,14 +29,28 @@ interface SpeakerFilterState {
   speakerIds: number[]
 }
 
-// 导入JSON数据
-import labInfoData from '../getAllLabInfo.json'
-import transResultData from '../getTransResult.json'
-
 const { Content } = Layout
+
+const filterTranscriptBySpeakers = (transcript: ParsedTranscript, speakerIds: number[]): ParsedTranscript => {
+  const speakerSet = new Set(speakerIds)
+  return {
+    pg: transcript.pg.reduce<ParsedTranscript['pg']>((result, paragraph) => {
+      const filteredSentences = paragraph.sc.filter(sentence => speakerSet.has(sentence.si))
+      if (filteredSentences.length === 0) {
+        return result
+      }
+      result.push({
+        ...paragraph,
+        sc: filteredSentences
+      })
+      return result
+    }, [])
+  }
+}
 
 function App() {
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [currentTime, setCurrentTime] = useState(0)
   const [labInfo, setLabInfo] = useState<LabInfoResponse | null>(null)
   const [transResult, setTransResult] = useState<TransResultResponse | null>(null)
@@ -53,34 +68,54 @@ function App() {
   })
   const [filteredTranscript, setFilteredTranscript] = useState<ParsedTranscript | null>(null)
 
+  const allLabCards = useMemo<LabInfo[]>(() => {
+    if (!labInfo) return []
+    return [
+      ...labInfo.data.labCardsMap.labSummaryInfo,
+      ...labInfo.data.labCardsMap.labInfo
+    ]
+  }, [labInfo])
+
+  const findLabCardByKey = useCallback((keys: string[]) => {
+    return allLabCards.find((lab) => keys.includes(lab.key))
+  }, [allLabCards])
+
   // 加载数据
   useEffect(() => {
-    try {
-      // 使用真实JSON数据
-      setLabInfo(labInfoData as LabInfoResponse)
+    let cancelled = false
 
-      // 处理 transResultData
-      const transData = transResultData as TransResultResponse
-
-      // 解析 audioSegments（如果是字符串）
-      if (typeof transData.data.audioSegments === 'string') {
-        transData.data.audioSegments = JSON.parse(transData.data.audioSegments)
-      }
-
-      setTransResult(transData)
-
-      // 解析转写结果
-      if (transData.data?.result) {
-        const parsed = JSON.parse(transData.data.result)
-        setParsedTranscript(parsed)
-        setFilteredTranscript(parsed)
-      }
-
+    const applyPageData = (payload: {
+      labInfo: LabInfoResponse
+      transResult: TransResultResponse
+      parsedTranscript: ParsedTranscript
+    }) => {
+      if (cancelled) return
+      setLoadError('')
+      setLabInfo(payload.labInfo)
+      setTransResult(payload.transResult)
+      setParsedTranscript(payload.parsedTranscript)
+      setFilteredTranscript(payload.parsedTranscript)
       setLoading(false)
-    } catch (error) {
-      console.error('加载数据失败:', error)
-      message.error('数据加载失败')
-      setLoading(false)
+    }
+
+    const loadData = async () => {
+      try {
+        applyPageData(await viewerApiService.loadPageData())
+      } catch (error) {
+        console.error('加载真实接口失败:', error)
+        if (!cancelled) {
+          const nextError = error instanceof Error ? error.message : '真实接口加载失败'
+          setLoadError(nextError)
+          message.error(nextError)
+          setLoading(false)
+        }
+      }
+    }
+
+    loadData()
+
+    return () => {
+      cancelled = true
     }
   }, [])
 
@@ -89,44 +124,78 @@ function App() {
     if (!labInfo) return []
 
     // 从 pptTitle 获取带时间戳的章节数据
-    const pptTitleLab = labInfo.data.labCardsMap.labInfo.find(lab => lab.key === 'pptTitle')
+    const pptTitleLab = findLabCardByKey(['pptTitle'])
     const timeItems = pptTitleLab?.contents[0]?.contentValues as AgendaItem[] || []
 
     // 从 agendaSummary 获取带摘要的章节数据
-    const agendaLab = labInfo.data.labCardsMap.labSummaryInfo.find(lab => lab.key === 'agendaSummary')
+    const agendaLab = findLabCardByKey(['agendaSummary'])
     const summaryItems = agendaLab?.contents[0]?.contentValues as AgendaItem[] || []
 
-    // 合并数据：将 summary 从 agendaSummary 匹配到 pptTitle 的章节
-    return timeItems.map((timeItem, index) => ({
-      ...timeItem,
-      summary: summaryItems[index]?.value || ''
-    }))
-  }, [labInfo])
+    // 真实接口有时只返回 agendaSummary，没有 pptTitle。
+    // 这种情况下也要把摘要内容渲染出来，方便确认接口数据已接到页面。
+    if (timeItems.length > 0) {
+      return timeItems.map((timeItem, index) => {
+        const title = timeItem.title || timeItem.value || `章节 ${index + 1}`
+        return {
+          ...timeItem,
+          title,
+          value: title,
+          summary: summaryItems[index]?.value || ''
+        }
+      })
+    }
 
-  // 生成全文概要（将所有章节的 summary 拼接）
+    return summaryItems.map((summaryItem, index) => {
+      const title = summaryItem.title || summaryItem.value || `章节 ${index + 1}`
+      return {
+        ...summaryItem,
+        title,
+        value: title,
+        summary: summaryItem.value || ''
+      }
+    })
+  }, [findLabCardByKey, labInfo])
+
+  // 全文概要优先读取真实接口的 fullSummary 卡片，没有时再退回章节摘要拼接
   const fullSummary = useMemo(() => {
+    const fullSummaryLab = findLabCardByKey(['fullSummary'])
+    const fullSummaryItems = fullSummaryLab?.contents[0]?.contentValues as AgendaItem[] || []
+    const directSummary = fullSummaryItems.map(item => item.value).filter(Boolean).join('')
+    if (directSummary) {
+      return directSummary
+    }
     return agendaItems.map(item => item.summary).filter(Boolean).join('')
-  }, [agendaItems])
+  }, [agendaItems, findLabCardByKey])
 
   // 提取关键词数据
   const keywords = useMemo(() => {
     if (!labInfo) return []
-    const keywordLab = labInfo.data.labCardsMap.labInfo.find(lab => lab.key === 'keyWordsExtractor')
+    const keywordLab = findLabCardByKey(['keyWordsExtractor'])
     if (keywordLab?.contents[0]?.contentValues) {
       return keywordLab.contents[0].contentValues as KeywordItem[]
     }
     return []
-  }, [labInfo])
+  }, [findLabCardByKey, labInfo])
 
   // 提取角色摘要数据
   const roleSummary = useMemo(() => {
     if (!labInfo) return []
-    const roleLab = labInfo.data.labCardsMap.labSummaryInfo.find(lab => lab.key === 'roleSummary')
+    const roleLab = findLabCardByKey(['roleSummary'])
     if (roleLab?.contents[0]?.contentValues) {
       return roleLab.contents[0].contentValues as RoleSummaryItem[]
     }
     return []
-  }, [labInfo])
+  }, [findLabCardByKey, labInfo])
+
+  // 提取问答回顾数据：真实接口如果返回 questionAnswerLlm 或 qaReview，就直接展示
+  const qaPairs = useMemo(() => {
+    if (!labInfo) return []
+    const qaLab = findLabCardByKey(['questionAnswerLlm', 'qaReview'])
+    if (qaLab?.contents[0]?.contentValues) {
+      return qaLab.contents[0].contentValues as QAPair[]
+    }
+    return []
+  }, [findLabCardByKey, labInfo])
 
   // 处理时间更新
   const handleTimeUpdate = (time: number) => {
@@ -145,27 +214,15 @@ function App() {
     setCurrentTime(time / 1000)
   }
 
-  // 发言人筛选：由后端处理，前端只渲染结果
-  const handleSpeakerFilterChange = useCallback(async (nextFilter: SpeakerFilterState) => {
+  // 发言人筛选直接在前端本地处理，避免依赖旧的本地模拟接口
+  const handleSpeakerFilterChange = useCallback((nextFilter: SpeakerFilterState) => {
     setSpeakerFilter(nextFilter)
     if (!parsedTranscript) return
     if (nextFilter.useAll) {
       setFilteredTranscript(parsedTranscript)
       return
     }
-    try {
-      const res = await fetch('/api/transcript/filter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ speakerIds: nextFilter.speakerIds })
-      })
-      if (!res.ok) throw new Error('筛选失败')
-      const json = await res.json() as { code: number; data?: ParsedTranscript }
-      if (json?.code !== 0 || !json.data) return
-      setFilteredTranscript(json.data)
-    } catch {
-      // 接口异常时不阻断页面交互
-    }
+    setFilteredTranscript(filterTranscriptBySpeakers(parsedTranscript, nextFilter.speakerIds))
   }, [parsedTranscript])
 
   // 截取视频帧
@@ -258,7 +315,7 @@ function App() {
   if (!transResult || !parsedTranscript) {
     return (
       <div className="error-container">
-        数据加载失败，请刷新页面重试
+        {loadError || '数据加载失败，请刷新页面重试'}
       </div>
     )
   }
@@ -307,6 +364,7 @@ function App() {
                   keywords={keywords}
                   agendaItems={agendaItems}
                   roleSummary={roleSummary}
+                  qaPairs={qaPairs}
                   fullSummary={fullSummary}
                   currentTime={currentTime}
                   onAgendaClick={handleAgendaClick}

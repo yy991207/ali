@@ -61,6 +61,59 @@ interface VideoPlayerProps {
 // 播放速度选项
 const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2]
 
+const isValidTimeValue = (value: number | undefined): value is number => (
+  typeof value === 'number' && Number.isFinite(value) && value >= 0
+)
+
+const getAgendaDurationFallback = (items: AgendaItem[]): number => (
+  items.reduce((maxEndTime, item) => {
+    if (isValidTimeValue(item.endTime)) {
+      return Math.max(maxEndTime, item.endTime)
+    }
+    if (isValidTimeValue(item.time)) {
+      return Math.max(maxEndTime, item.time)
+    }
+    return maxEndTime
+  }, 0)
+)
+
+const buildTimedAgendaItems = (items: AgendaItem[], totalDurationSec: number): AgendaItem[] => {
+  const sortedItems = items
+    .filter(item => isValidTimeValue(item.time))
+    .map(item => ({ ...item, time: item.time! }))
+    .sort((left, right) => left.time - right.time)
+
+  const fallbackEndTime = totalDurationSec > 0 ? totalDurationSec * 1000 : undefined
+
+  return sortedItems.map((item, index) => {
+    const nextItem = sortedItems[index + 1]
+    const nextStartTime = isValidTimeValue(nextItem?.time) ? nextItem.time : undefined
+    const rawEndTime = isValidTimeValue(item.endTime) ? item.endTime : undefined
+    const endTime = Math.max(item.time, rawEndTime ?? nextStartTime ?? fallbackEndTime ?? item.time)
+
+    return {
+      ...item,
+      endTime
+    }
+  })
+}
+
+const findSegmentIndexByTime = (items: AgendaItem[], timeMs: number): number => {
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index]
+    if (!isValidTimeValue(item.time) || !isValidTimeValue(item.endTime)) continue
+    // 这里优先按真实时间轴命中章节，避免接口总时长缺失时进度条高亮错位。
+    if (timeMs >= item.time && timeMs < item.endTime) {
+      return index
+    }
+  }
+
+  return items.reduce((matchedIndex, item, index) => {
+    if (!isValidTimeValue(item.time)) return matchedIndex
+    return item.time <= timeMs ? index : matchedIndex
+  }, -1)
+}
+
 export default function VideoPlayer({
   videoUrl,
   duration,
@@ -94,6 +147,23 @@ export default function VideoPlayer({
   const [transcriptMarks, setTranscriptMarks] = useState<TranscriptMark[]>([])
 
   const SEGMENT_GAP_PX = 6
+
+  // 当前真实接口里 duration 可能还是 0，这里优先用接口总时长，没有时再用章节分段的结束时间兜底。
+  const effectiveDuration = useMemo(() => {
+    if (duration > 0) {
+      return duration
+    }
+    const fallbackDurationMs = getAgendaDurationFallback(agendaItems)
+    return fallbackDurationMs > 0 ? fallbackDurationMs / 1000 : 0
+  }, [agendaItems, duration])
+
+  const timedAgendaItems = useMemo(() => (
+    buildTimedAgendaItems(agendaItems, effectiveDuration)
+  ), [agendaItems, effectiveDuration])
+
+  const sliderValue = effectiveDuration > 0
+    ? Math.min(currentTime, effectiveDuration)
+    : 0
   
   // 筛选状态
   const filteredTranscriptMarks = useMemo(() => {
@@ -334,105 +404,44 @@ export default function VideoPlayer({
 
   // 跳转到上一段
   const jumpToPrevSegment = useCallback(() => {
-    console.log('[上一章] 点击了上一章按钮')
-    console.log('[上一章] videoRef.current:', videoRef.current)
-    console.log('[上一章] agendaItems.length:', agendaItems.length)
-    
-    if (!videoRef.current || agendaItems.length === 0) {
-      console.log('[上一章] 条件不满足，直接返回')
+    if (!videoRef.current || timedAgendaItems.length === 0) {
       return
     }
-    
+
     const currentMs = videoRef.current.currentTime * 1000
-    console.log('[上一章] 当前时间(ms):', currentMs)
-    
-    // 查找当前所在的章节 - 使用更精确的逻辑
-    let currentIndex = -1
-    for (let i = 0; i < agendaItems.length; i++) {
-      const item = agendaItems[i]
-      if (item.time !== undefined && item.endTime !== undefined) {
-        // 使用一个小的时间偏移量来避免边界问题
-        if (currentMs >= item.time && currentMs < item.endTime - 100) {
-          currentIndex = i
-          break
-        }
-      }
-    }
-    // 如果没找到，可能是正好在边界上，尝试宽松匹配
-    if (currentIndex === -1) {
-      currentIndex = agendaItems.findIndex(
-        item => item.time !== undefined && item.endTime !== undefined && 
-                currentMs >= item.time && currentMs <= item.endTime
-      )
-    }
-    console.log('[上一章] 当前章节索引:', currentIndex)
-    
+    const currentIndex = findSegmentIndexByTime(timedAgendaItems, currentMs)
+
     if (currentIndex > 0) {
-      const prevItem = agendaItems[currentIndex - 1]
-      console.log('[上一章] 上一章节:', prevItem)
-      if (prevItem.time !== undefined) {
+      const prevItem = timedAgendaItems[currentIndex - 1]
+      if (isValidTimeValue(prevItem.time)) {
         videoRef.current.currentTime = prevItem.time / 1000
         onTimeUpdate(prevItem.time / 1000)
-        console.log('[上一章] 跳转完成，跳转到:', prevItem.time / 1000)
       }
-    } else {
-      console.log('[上一章] 已经是第一章，无法跳转')
     }
-  }, [agendaItems, onTimeUpdate])
+  }, [onTimeUpdate, timedAgendaItems])
 
   // 跳转到下一段
   const jumpToNextSegment = useCallback(() => {
-    console.log('[下一章] 点击了下一章按钮')
-    console.log('[下一章] videoRef.current:', videoRef.current)
-    console.log('[下一章] agendaItems.length:', agendaItems.length)
-    
-    if (!videoRef.current || agendaItems.length === 0) {
-      console.log('[下一章] 条件不满足，直接返回')
+    if (!videoRef.current || timedAgendaItems.length === 0) {
       return
     }
-    
+
     const currentMs = videoRef.current.currentTime * 1000
-    console.log('[下一章] 当前时间(ms):', currentMs)
-    
-    // 查找当前所在的章节 - 使用更精确的逻辑
-    let currentIndex = -1
-    for (let i = 0; i < agendaItems.length; i++) {
-      const item = agendaItems[i]
-      if (item.time !== undefined && item.endTime !== undefined) {
-        // 使用一个小的时间偏移量来避免边界问题
-        if (currentMs >= item.time && currentMs < item.endTime - 100) {
-          currentIndex = i
-          break
-        }
-      }
-    }
-    // 如果没找到，可能是正好在边界上，尝试宽松匹配
-    if (currentIndex === -1) {
-      currentIndex = agendaItems.findIndex(
-        item => item.time !== undefined && item.endTime !== undefined && 
-                currentMs >= item.time && currentMs <= item.endTime
-      )
-    }
-    console.log('[下一章] 当前章节索引:', currentIndex)
-    
-    if (currentIndex < agendaItems.length - 1) {
-      const nextItem = agendaItems[currentIndex + 1]
-      console.log('[下一章] 下一章节:', nextItem)
-      if (nextItem.time !== undefined) {
+    const currentIndex = findSegmentIndexByTime(timedAgendaItems, currentMs)
+
+    if (currentIndex >= 0 && currentIndex < timedAgendaItems.length - 1) {
+      const nextItem = timedAgendaItems[currentIndex + 1]
+      if (isValidTimeValue(nextItem.time)) {
         videoRef.current.currentTime = nextItem.time / 1000
         onTimeUpdate(nextItem.time / 1000)
-        console.log('[下一章] 跳转完成，跳转到:', nextItem.time / 1000)
       }
-    } else {
-      console.log('[下一章] 已经是最后一章，无法跳转')
     }
-  }, [agendaItems, onTimeUpdate])
+  }, [onTimeUpdate, timedAgendaItems])
 
   // 计算当前播放位置所在的章节
-  const currentSegmentIndex = agendaItems.findIndex(
-    item => item.time !== undefined && item.endTime !== undefined && 
-            currentTime * 1000 >= item.time && currentTime * 1000 <= item.endTime
-  )
+  const currentSegmentIndex = useMemo(() => (
+    findSegmentIndexByTime(timedAgendaItems, currentTime * 1000)
+  ), [currentTime, timedAgendaItems])
 
   // 速度菜单项
   const rateMenuItems = PLAYBACK_RATES.map(rate => ({
@@ -463,20 +472,25 @@ export default function VideoPlayer({
 
   // 根据时间找到对应章节
   const getAgendaItemByTime = useCallback((timeMs: number) => {
-    return agendaItems.find(it => it.time !== undefined && it.endTime !== undefined && timeMs >= it.time && timeMs <= it.endTime) || null
-  }, [agendaItems])
+    return timedAgendaItems.find((item) => (
+      isValidTimeValue(item.time) &&
+      isValidTimeValue(item.endTime) &&
+      timeMs >= item.time &&
+      timeMs <= item.endTime
+    )) || null
+  }, [timedAgendaItems])
 
   // 处理进度条悬停（用于在整条进度条上展示章节浮窗）
   const handleProgressBarMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!duration) return
+    if (!effectiveDuration) return
     const rect = e.currentTarget.getBoundingClientRect()
     const x = e.clientX - rect.left
     const percent = Math.max(0, Math.min(1, x / rect.width))
-    const timeSec = percent * duration
+    const timeSec = percent * effectiveDuration
     const timeMs = timeSec * 1000
     setHoveredBarTime(timeMs)
     setHoveredBarLeftPercent(percent * 100)
-  }, [duration])
+  }, [effectiveDuration])
 
   // 切换全屏
   const toggleFullscreen = useCallback(() => {
@@ -680,7 +694,7 @@ export default function VideoPlayer({
             {/* 用户标记（来自转写文本） */}
             <div className="user-mark-layer">
               {filteredTranscriptMarks.map((mark) => {
-                const leftPercent = (mark.timeMs / 1000 / duration) * 100
+                const leftPercent = (mark.timeMs / 1000 / effectiveDuration) * 100
                 if (!Number.isFinite(leftPercent)) return null
                 return (
                   <Tooltip
@@ -730,11 +744,11 @@ export default function VideoPlayer({
             />
             {/* 分段标记 */}
             <div className="segment-marks">
-              {agendaItems.map((item, index) => {
-                if (item.time === undefined || item.endTime === undefined) return null
+              {timedAgendaItems.map((item, index) => {
+                if (!isValidTimeValue(item.time) || !isValidTimeValue(item.endTime) || !effectiveDuration) return null
 
-                const leftPercent = (item.time / 1000 / duration) * 100
-                const widthPercent = ((item.endTime - item.time) / 1000 / duration) * 100
+                const leftPercent = (item.time / 1000 / effectiveDuration) * 100
+                const widthPercent = ((item.endTime - item.time) / 1000 / effectiveDuration) * 100
                 const isActive = index === currentSegmentIndex
                 const isHovered = index === hoveredSegment
                 const isPlayed = currentTime * 1000 >= item.endTime
@@ -784,9 +798,9 @@ export default function VideoPlayer({
             <Slider
               className="progress-slider"
               min={0}
-              max={duration}
+              max={effectiveDuration}
               step={0.1}
-              value={currentTime}
+              value={sliderValue}
               onChange={handleSliderChange}
               tooltip={{ formatter: (value) => formatTime(value || 0) }}
             />
@@ -829,7 +843,7 @@ export default function VideoPlayer({
             <div className="time-display">
               <span className="current-time">{formatTime(currentTime)}</span>
               <span className="time-separator"> / </span>
-              <span className="total-time">{formatTime(duration)}</span>
+              <span className="total-time">{formatTime(effectiveDuration)}</span>
             </div>
           </div>
 
@@ -960,7 +974,7 @@ export default function VideoPlayer({
               {/* 用户标记（来自转写文本） */}
               <div className="mini-user-mark-layer">
                 {filteredTranscriptMarks.map((mark) => {
-                  const leftPercent = (mark.timeMs / 1000 / duration) * 100
+                  const leftPercent = (mark.timeMs / 1000 / effectiveDuration) * 100
                   if (!Number.isFinite(leftPercent)) return null
                   return (
                     <Tooltip
@@ -1009,11 +1023,11 @@ export default function VideoPlayer({
                 onMouseMove={handleProgressBarMouseMove}
               />
               <div className="mini-segment-marks">
-                {agendaItems.map((item, index) => {
-                  if (item.time === undefined || item.endTime === undefined) return null
+                {timedAgendaItems.map((item, index) => {
+                  if (!isValidTimeValue(item.time) || !isValidTimeValue(item.endTime) || !effectiveDuration) return null
 
-                  const leftPercent = (item.time / 1000 / duration) * 100
-                  const widthPercent = ((item.endTime - item.time) / 1000 / duration) * 100
+                  const leftPercent = (item.time / 1000 / effectiveDuration) * 100
+                  const widthPercent = ((item.endTime - item.time) / 1000 / effectiveDuration) * 100
                   const isActive = index === currentSegmentIndex
                   const isPlayed = currentTime * 1000 >= item.endTime
 
@@ -1050,9 +1064,9 @@ export default function VideoPlayer({
               <Slider
                 className="mini-progress-slider"
                 min={0}
-                max={duration}
+                max={effectiveDuration}
                 step={0.1}
-                value={currentTime}
+                value={sliderValue}
                 onChange={handleSliderChange}
                 tooltip={{ formatter: (value) => formatTime(value || 0) }}
               />
@@ -1067,7 +1081,7 @@ export default function VideoPlayer({
             </Dropdown>
 
             {/* 总时长 */}
-            <span className="mini-total-time">{formatTime(duration)}</span>
+            <span className="mini-total-time">{formatTime(effectiveDuration)}</span>
 
             {/* 展开视频按钮 */}
             <Tooltip title="展开视频">

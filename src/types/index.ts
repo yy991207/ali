@@ -32,7 +32,7 @@ export interface RoleSummaryItem {
 // Lab卡片内容
 export interface LabContent {
   type: string;
-  contentValues: AgendaItem[] | KeywordItem[] | RoleSummaryItem[];
+  contentValues: AgendaItem[] | KeywordItem[] | RoleSummaryItem[] | QAPair[];
 }
 
 // Lab信息

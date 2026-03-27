@@ -3,6 +3,7 @@ import { Card, Typography, Tag, Tooltip, Button } from 'antd'
 import { PushpinOutlined, QuestionCircleOutlined, CheckCircleOutlined, StopOutlined, FileTextOutlined, SoundOutlined } from '@ant-design/icons'
 import { TranscriptParagraph, TranscriptSentence } from '../../types'
 import { formatTimeFromMs } from '../../utils/time'
+import { browserMarkStore } from '../../services/browserMarkStore'
 import './index.css'
 
 const { Text } = Typography
@@ -242,10 +243,8 @@ export default function TranscriptPanel({
   const [groupMarks, setGroupMarks] = useState<Record<string, MarkType>>({})
   const [renderTimeMs, setRenderTimeMs] = useState(0)
   const groupMarkMetaRef = useRef<Record<string, { groupId: string; type: 'important' | 'question' | 'todo'; timeMs: number; text: string }>>({})
-  const MARK_API_URL = '/api/marks'
   const marksLoadedRef = useRef(false)
   const marksSaveTimerRef = useRef<number | null>(null)
-  const marksLoadTimerRef = useRef<number | null>(null)
   const lastSavedPayloadRef = useRef<string>('')
   const [selectionMenu, setSelectionMenu] = useState<{
     visible: boolean
@@ -267,91 +266,47 @@ export default function TranscriptPanel({
     color: string
   }>>([])
 
-  // 从后端加载标记：刷新后保持标记与筛选可用
+  // 从浏览器本地加载标记：删除 8000 服务后，依然保留当前资源的标记数据
   useEffect(() => {
-    let canceled = false
-    const controller = new AbortController()
+    const storedMarks = browserMarkStore.load()
+    const loadedGroupMarks = storedMarks.groupMarks || []
+    const loadedTextMarks = storedMarks.textMarks || []
 
-    const loadMarks = async (attempt: number) => {
-      try {
-        const res = await fetch(MARK_API_URL, { signal: controller.signal })
-        if (!res.ok) throw new Error('获取标记失败')
-        const json = await res.json() as {
-          code: number
-          message: string
-          data?: {
-            groupMarks?: Array<{ groupId: string; type: 'important' | 'question' | 'todo'; timeMs: number; text: string }>
-            textMarks?: Array<{
-              id: string
-              groupId: string
-              startTimeMs: number
-              endTimeMs: number
-              text: string
-              type: 'important' | 'question' | 'todo'
-              color: string
-            }>
-          }
-        }
-        if (canceled) return
-        if (json?.code !== 0) throw new Error('标记接口异常')
-
-        const loadedGroupMarks = json.data?.groupMarks || []
-        const loadedTextMarks = json.data?.textMarks || []
-
-        if (loadedGroupMarks.length) {
-          const nextGroupMarks: Record<string, MarkType> = {}
-          const nextMeta: Record<string, { groupId: string; type: 'important' | 'question' | 'todo'; timeMs: number; text: string }> = {}
-          loadedGroupMarks.forEach((item) => {
-            if (!item?.groupId || !item?.type) return
-            nextGroupMarks[item.groupId] = item.type
-            nextMeta[item.groupId] = item
-            // 同步进度条标记
-            window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
-              detail: { groupId: item.groupId, type: item.type, timeMs: item.timeMs, text: item.text }
-            }))
-          })
-          groupMarkMetaRef.current = nextMeta
-          setGroupMarks(nextGroupMarks)
-        }
-
-        if (loadedTextMarks.length) {
-          setTextMarks(loadedTextMarks)
-          // 同步进度条标记
-          loadedTextMarks.forEach((item) => {
-            if (!item?.id) return
-            window.dispatchEvent(new CustomEvent('textMarkAdded', { detail: item }))
-          })
-        }
-        const snapshot = JSON.stringify({
-          groupMarks: loadedGroupMarks,
-          textMarks: loadedTextMarks
-        })
-        lastSavedPayloadRef.current = snapshot
-        marksLoadedRef.current = true
-      } catch {
-        if (canceled) return
-        if (attempt < 2) {
-          // 后端未就绪时做轻量重试，避免只看到 POST
-          marksLoadTimerRef.current = window.setTimeout(() => loadMarks(attempt + 1), 500)
-          return
-        }
-        // 多次失败后允许继续使用并支持写回
-        marksLoadedRef.current = true
-      }
+    if (loadedGroupMarks.length) {
+      const nextGroupMarks: Record<string, MarkType> = {}
+      const nextMeta: Record<string, { groupId: string; type: 'important' | 'question' | 'todo'; timeMs: number; text: string }> = {}
+      loadedGroupMarks.forEach((item) => {
+        if (!item?.groupId || !item?.type) return
+        nextGroupMarks[item.groupId] = item.type
+        nextMeta[item.groupId] = item
+        window.dispatchEvent(new CustomEvent('transcriptMarkChange', {
+          detail: { groupId: item.groupId, type: item.type, timeMs: item.timeMs, text: item.text }
+        }))
+      })
+      groupMarkMetaRef.current = nextMeta
+      setGroupMarks(nextGroupMarks)
     }
 
-    loadMarks(0)
+    if (loadedTextMarks.length) {
+      setTextMarks(loadedTextMarks)
+      loadedTextMarks.forEach((item) => {
+        if (!item?.id) return
+        window.dispatchEvent(new CustomEvent('textMarkAdded', { detail: item }))
+      })
+    }
+
+    lastSavedPayloadRef.current = JSON.stringify({
+      groupMarks: loadedGroupMarks,
+      textMarks: loadedTextMarks
+    })
+    marksLoadedRef.current = true
+
     return () => {
-      canceled = true
-      if (marksLoadTimerRef.current) {
-        window.clearTimeout(marksLoadTimerRef.current)
-        marksLoadTimerRef.current = null
-      }
-      controller.abort()
+      marksLoadedRef.current = false
     }
   }, [])
 
-  // 标记写回后端：避免频繁写入，这里做轻量防抖
+  // 标记写回浏览器本地：避免频繁写入，这里做轻量防抖
   useEffect(() => {
     if (!marksLoadedRef.current) return
     if (marksSaveTimerRef.current) {
@@ -367,14 +322,7 @@ export default function TranscriptPanel({
       const payloadSnapshot = JSON.stringify(payload)
       if (payloadSnapshot === lastSavedPayloadRef.current) return
       lastSavedPayloadRef.current = payloadSnapshot
-      // 标记写回是耗时 IO，异步处理更稳妥
-      fetch(MARK_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }).catch(() => {
-        // 写回失败不影响当前交互
-      })
+      browserMarkStore.save(payload)
     }, 300)
 
     return () => {

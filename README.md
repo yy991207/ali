@@ -97,8 +97,6 @@
 - Git >= 2.30.0
 - conda 已安装并可用
 
-> 运行服务前需要先 `conda activate deepagent`。
-
 ### 安装流程
 
 1. **克隆项目**
@@ -114,7 +112,7 @@ cd ali
 npm install
 ```
 
-3. **一键启动前后端（推荐）**
+3. **启动前端（推荐）**
 
 ```bash
 bash scripts/dev_start.sh
@@ -122,13 +120,11 @@ bash scripts/dev_start.sh
 
 4. **访问应用**
 
-浏览器打开 http://localhost:5173
+浏览器打开 http://localhost:3000
 
 ### 手动启动（可选）
 
 ```bash
-conda activate deepagent
-conda run -n mark uvicorn server.main:app --reload --port 8000
 npm run dev
 ```
 
@@ -142,28 +138,26 @@ npm run build
 
 ---
 
-## 后端服务
+## 数据来源
 
-### 标记接口
+### 真实接口
 
-- `GET /api/marks`：拉取当前标记数据
-- `POST /api/marks`：写回标记数据（只返回成功状态，不回传数据）
+- 页面主数据直接由前端请求这两个真实接口：
+  - `getTransResult`
+  - `getAllLabInfo`
+- 请求时会从 `config.yaml` 读取：
+  - `X-Access-Token`
+  - `resourceId`
 
-### 发言人筛选接口
+### 本地标记存储
 
-- `POST /api/transcript/filter`：按发言人筛选转写数据并返回结果
+- 标记数据不再走 `8000` 本地服务。
+- 当前改成浏览器 `localStorage` 持久化，按 `resourceId` 分开存储。
 
-### 数据存储
+### 重要说明
 
-- 标记数据存放在 `server/data/marks.json`
-- 前端启动时会先 GET 拉取数据，标记变化后再 POST 写回
-
-### 前后端联动逻辑
-
-- “筛选”只影响前端显示规则，不会触发 GET
-- 页面刷新或首次进入时会 GET 一次
-- 标记变化会写回 POST，且有去重，不会在加载后立刻写回
-- 发言人筛选由后端处理，前端只负责渲染结果
+- 现在是纯前端直连方案，`config.yaml` 里的 token 会进入浏览器构建产物。
+- 这个方案只适合本地测试或临时联调，后续如果要正式部署，必须把 token 和接口代理迁回服务端。
 
 ---
 
@@ -184,25 +178,23 @@ ali/
 │   │   └── index.ts              # 全局类型定义
 │   ├── utils/                    # 工具函数
 │   │   └── time.ts               # 时间格式化工具
+│   ├── services/                 # 前端数据服务
 │   ├── App.tsx                   # 应用主组件
 │   ├── App.css                   # 应用样式
 │   ├── main.tsx                  # 应用入口
 │   └── index.css                 # 全局样式
-├── server/                       # 后端服务（标记接口）
-│   ├── data/                      # 标记数据
-│   │   └── marks.json             # 标记数据文件
-│   ├── main.py                    # FastAPI 服务入口
-│   └── requirements.txt           # 后端依赖
 ├── scripts/                      # 启动脚本
-│   └── dev_start.sh               # 一键启动前后端
+│   ├── dev_start.sh               # 启动前端
+│   └── test_remote_interfaces.sh  # 真实接口自测脚本
+├── config.yaml                   # 前端直连真实接口的本地配置
 ├── doc/                          # 文档目录（已忽略）
 ├── .gitignore                    # Git 忽略配置
 ├── index.html                    # HTML 模板
 ├── package.json                  # 项目依赖配置
 ├── tsconfig.json                 # TypeScript 配置
 ├── vite.config.ts                # Vite 构建配置
-├── getAllLabInfo.json            # 示例数据：实验信息
-└── getTransResult.json           # 示例数据：转写结果
+├── getAllLabInfo.json            # 示例数据：实验信息（仅保留做字段参考）
+└── getTransResult.json           # 示例数据：转写结果（仅保留做字段参考）
 ```
 
 ---

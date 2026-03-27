@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { Card, Tag, Typography, Tabs, Button } from 'antd'
 import { ClockCircleOutlined, TagOutlined, FileTextOutlined, MessageOutlined, QuestionCircleOutlined } from '@ant-design/icons'
-import { AgendaItem, KeywordItem, RoleSummaryItem } from '../../types'
+import { AgendaItem, KeywordItem, RoleSummaryItem, QAPair } from '../../types'
 import { formatTimeFromMs } from '../../utils/time'
 import './index.css'
 
@@ -11,6 +11,7 @@ interface SmartOverviewProps {
   keywords: KeywordItem[]
   agendaItems: AgendaItem[]
   roleSummary: RoleSummaryItem[]
+  qaPairs: QAPair[]
   fullSummary: string
   currentTime: number
   onAgendaClick?: (item: AgendaItem) => void
@@ -20,6 +21,7 @@ export default function SmartOverview({
   keywords,
   agendaItems,
   roleSummary,
+  qaPairs,
   fullSummary,
   currentTime,
   onAgendaClick
@@ -218,8 +220,31 @@ export default function SmartOverview({
         </span>
       ),
       children: (
-        <div className="qa-placeholder">
-          问答回顾内容
+        <div className="role-summary-list">
+          {qaPairs.map((item) => {
+            const firstQuestionTime = item.extensions?.[0]?.sentenceInfoOfQuestion?.[0]?.beginTime
+            return (
+              <div key={item.id} className="role-summary-item">
+                <div className="agenda-header">
+                  <Text className="agenda-title" strong>
+                    {item.title}
+                  </Text>
+                  {Number.isFinite(firstQuestionTime) && (
+                    <span className="review-icon">
+                      <ClockCircleOutlined />
+                      {formatTimeFromMs(firstQuestionTime as number)}
+                    </span>
+                  )}
+                </div>
+                <Paragraph className="role-summary-text">
+                  {item.value}
+                </Paragraph>
+              </div>
+            )
+          })}
+          {qaPairs.length === 0 && (
+            <div className="qa-placeholder" />
+          )}
         </div>
       )
     }
